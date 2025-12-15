@@ -50,6 +50,7 @@ def process_folder(input_folder, output_folder):
 
 def warp_and_save(path_ref, path_images_dir, path_output_dir):
 
+
     # 1. Load template (reference) image to get its size
     ref_im = cv2.imread(path_ref)
     if ref_im is None: 

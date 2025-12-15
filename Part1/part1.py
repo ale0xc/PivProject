@@ -27,10 +27,11 @@ def match_features(des_ref, des_curr, ratio=0.75):
     index_params = dict(algorithm=1, trees=5)
     search_params = dict(checks=50)
 
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    # flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-    matches = flann.knnMatch(des_curr.astype(np.float32), des_ref.astype(np.float32), k=2)
-
+    # matches = flann.knnMatch(des_curr.astype(np.float32), des_ref.astype(np.float32), k=2)
+    bf = cv2.BFMatcher()
+    matches = bf.knnMatch(des_curr,des_ref,k=2)
     matches_curr_idx = [] 
     matches_ref_idx = [] 
     
@@ -60,7 +61,7 @@ def normalize_points(pts):
     
     return pts_norm[:, :2], T
 
-def ransac_homography(p1_norm, p2_norm, N, num_iter=2000, threshold_norm=0.05):
+def ransac_homography(p1_norm, p2_norm, N, num_iter=5000, threshold_norm=0.05):
 
     p1_h_norm = np.column_stack((p1_norm, np.ones(N)))
 
@@ -104,7 +105,7 @@ def ransac_homography(p1_norm, p2_norm, N, num_iter=2000, threshold_norm=0.05):
             best_inliers_count = count
             best_H_norm = H_cand
             best_mask = current_inliers
-
+            
         return best_inliers_count, best_H_norm, best_mask
 
 def compute_homography(pts1, pts2, num_iter=2000, threshold_norm=0.05):
@@ -168,7 +169,7 @@ def part1(path1, path2, path3, path4):
         kp_curr, des_curr = get_data_from_mat(curr_mat_path)
 
         ## 2.2 Match features
-        idx_curr, idx_ref = match_features(des_ref, des_curr)
+        idx_curr, idx_ref = match_features(des_ref, des_curr, ratio = 0.60)
 
         ## 2.3 Compute Homography using RANSAC
         if len(idx_curr) < 4:
