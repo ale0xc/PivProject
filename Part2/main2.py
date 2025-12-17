@@ -214,6 +214,78 @@ def warp_current_to_template(ref_depth, ref_K, curr_img, curr_K, R, T):
     
     return warped
 
+def generate_cleaning_mask(ref_depth, ref_K, curr_depth, curr_K, R, T, threshold=0.05):
+    """
+    Plane segmentation
+    """
+    h_ref, w_ref = ref_depth.shape
+
+    u_grid, v_grid = np.meshgrid(np.arange(w_ref), np.arange(h_ref))
+    
+    cx_ref, cy_ref = ref_K[0, 2], ref_K[1, 2]
+    fx_ref, fy_ref = ref_K[0, 0], ref_K[1, 1]
+    
+    x_ref = (u_grid - cx_ref) * ref_depth / fx_ref
+    y_ref = (v_grid - cy_ref) * ref_depth / fy_ref
+    z_ref = ref_depth
+    
+    P_ref_flat = np.stack((x_ref, y_ref, z_ref), axis=-1).reshape(-1, 3)
+    
+    # 3. Transformer le Template vers la Caméra Courante (Inverse de R,T)
+    # On cherche où le document "devrait être" dans la vue courante
+    # P_curr_theo = R.T * (P_ref - T)
+    P_curr_theo_flat = np.dot(P_ref_flat - T.flatten(), R) # R agit ici comme R.T
+    
+    # 4. Projeter ces points théoriques sur le capteur courant
+    cx_curr, cy_curr = curr_K[0, 2], curr_K[1, 2]
+    fx_curr, fy_curr = curr_K[0, 0], curr_K[1, 1]
+    
+    x_th, y_th, z_th = P_curr_theo_flat[:, 0], P_curr_theo_flat[:, 1], P_curr_theo_flat[:, 2]
+    
+    # Sécurité pour éviter la division par 0
+    z_safe = np.where(z_th > 0.001, z_th, 0.001)
+    
+    u_map = (x_th * fx_curr / z_safe) + cx_curr
+    v_map = (y_th * fy_curr / z_safe) + cy_curr
+    
+    # 5. Lire la VRAIE profondeur mesurée par la caméra à ces endroits
+    # On utilise remap pour aller chercher la valeur dans curr_depth
+    map_x = u_map.reshape(h_ref, w_ref).astype(np.float32)
+    map_y = v_map.reshape(h_ref, w_ref).astype(np.float32)
+    
+    measured_depth_warped = cv2.remap(curr_depth.astype(np.float32), map_x, map_y, cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+    
+    # La profondeur théorique (si c'était juste la feuille)
+    theoretical_depth_warped = z_th.reshape(h_ref, w_ref)
+    
+    # 6. CALCUL DU MASQUE (La différence)
+    # Différence signée : (Théorique - Mesurée)
+    # Si Mesurée < Théorique (ex: 0.5m vs 0.6m), c'est un objet devant (Main) -> Diff > 0
+    # Si Mesurée ~ Théorique, c'est la feuille -> Diff ~ 0
+    # Si Mesurée > Théorique, c'est un trou ou le fond -> Diff < 0
+    
+    diff = theoretical_depth_warped - measured_depth_warped
+    
+    # Critères pour être GARDÉ (Blanc / Inlier) :
+    # A. La profondeur mesurée doit être valide (>0)
+    # B. L'objet ne doit pas être "devant" de plus de 'threshold' (Pas une main)
+    # C. L'objet ne doit pas être "derrière" trop loin (Pas le fond, optionnel)
+    
+    is_valid_depth = measured_depth_warped > 0
+    is_plane = np.abs(diff) < threshold # On garde ce qui est proche du plan (+/- 3cm)
+    
+    mask = is_valid_depth & is_plane
+    
+    # Nettoyage (Morphologie pour enlever le bruit "poivre et sel")
+    mask_uint8 = (mask * 255).astype(np.uint8)
+    kernel = np.ones((5,5), np.uint8)
+    mask_clean = cv2.morphologyEx(mask_uint8, cv2.MORPH_OPEN, kernel)
+    mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_CLOSE, kernel)
+    
+    return mask_clean
+
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Pipeline to incorporate depth images.")
@@ -277,20 +349,39 @@ if __name__ == "__main__":
                 out_name = f"transform_{name_root}.mat"  
             sio.savemat(os.path.join(args.path_output_dir, out_name), {"R": R, "T": T}) 
 
-        warped_result = warp_current_to_template(ref_depth, ref_K, curr_img, curr_K, R, T)
+            warped = warp_current_to_template(ref_depth, ref_K, curr_img, curr_K, R, T)
 
-        h_vis, w_vis = ref_img.shape[:2]
-        curr_resized = cv2.resize(curr_img, (w_vis, h_vis))
-         
-        vis = np.zeros((h_vis, w_vis*3, 3), dtype=np.uint8)
-        vis[:, :w_vis] = curr_resized
-        vis[:, w_vis:w_vis*2] = warped_result
-        vis[:, w_vis*2:] = ref_img
-            
-        # Annotations
-        cv2.putText(vis, "Camera (Input)", (20,50), 0, 1, (0,0,255), 2)
-        cv2.putText(vis, "Stabilised (Result)", (w_vis+20,50), 0, 1, (0,255,0), 2)
-        cv2.putText(vis, "Template (Goal)", (w_vis*2+20,50), 0, 1, (255,0,0), 2)
+            mask = generate_cleaning_mask(ref_depth, ref_K, curr_depth, curr_K, R, T, threshold=0.07)
+    
+            cleaned_img = cv2.bitwise_and(warped, warped, mask=mask)
+                
+            background = np.full_like(warped, 200) # Gris
+            cleaned_final = np.where(mask[:,:,None] > 0, cleaned_img, background)
 
-        cv2.imwrite(os.path.join(args.path_output_dir, f"vis_{name_root}.jpg"), vis)
-        print(f"Succès -> T: {T.T}") 
+            h_vis, w_vis = ref_img.shape[:2]
+                
+            curr_resized = cv2.resize(curr_img, (w_vis, h_vis))
+        
+            mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+                
+            vis = np.zeros((h_vis, w_vis*4, 3), dtype=np.uint8)
+                
+                # Panneau A : Caméra (Input)
+            vis[:, :w_vis] = curr_resized
+                # Panneau B : Résultat Brut (Warped) -> On voit la main déformée
+            vis[:, w_vis:w_vis*2] = warped
+                # Panneau C : Le Masque (Blanc/Noir) -> Doit montrer la forme de la main en noir
+            vis[:, w_vis*2:w_vis*3] = mask_bgr
+                # Panneau D : Résultat Final (Clean) -> La main a disparu
+            vis[:, w_vis*3:] = cleaned_final
+                
+                # Annotations
+            cv2.putText(vis, "Input", (20,50), 0, 1, (0,0,255), 2)
+            cv2.putText(vis, "Raw Warp", (w_vis+20,50), 0, 1, (0,255,255), 2)
+            cv2.putText(vis, "Mask (Part 3)", (w_vis*2+20,50), 0, 1, (255,255,255), 2)
+            cv2.putText(vis, "Cleaned Doc", (w_vis*3+20,50), 0, 1, (0,255,0), 2)
+
+                # Sauvegarde
+            out_vis = os.path.join(args.path_output_dir, f"vis_part3_{name_root}.jpg")
+            cv2.imwrite(out_vis, vis)
+            print(f"Sauvegardé avec segmentation : {out_vis}")
