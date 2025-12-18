@@ -1,135 +1,79 @@
-import os
-import sys
 import cv2
 import numpy as np
+import os
 import scipy.io as sio
-import glob
-import part1
-import argparse
+import sys
+from part1 import part1  # Importa a função que vamos criar a seguir
 
+def ensure_dir(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-def get_keypoints(input_folder, fname, output_folder):
-    # Prepare filenames
-    impath = os.path.join(input_folder, fname)
-    base_name = os.path.splitext(fname)[0]
-    outim_path = os.path.join(output_folder, fname)
-    outkp_path = os.path.join(output_folder, f"{base_name}.mat")
+# --- CONFIGURAÇÃO ---
+# Caminhos relativos (ajusta se necessário)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+path_imgs = os.path.join(script_dir, "imagens")       # Pasta onde estão as imagens jpg
+path_feats = os.path.join(script_dir, "features")     # Pasta onde vamos guardar os .mat temporários
+path_out = os.path.join(script_dir, "output")         # Pasta para o resultado final
+template_name = "20251028_170011.jpg" # O teu template específico
 
-    # Load image
-    im = cv2.imread(impath)
-    imrgb = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+# Verificar argumentos da linha de comando (conforme PDF [cite: 79])
+if len(sys.argv) > 4:
+    ref_img_path = sys.argv[1]
+    path_imgs = sys.argv[2]
+    path_feats = sys.argv[3]
+    path_out = sys.argv[4]
+else:
+    # Fallback para execução simples sem argumentos
+    ref_img_path = os.path.join(path_imgs, template_name)
 
-    # Initiate SIFT detector
-    sift = cv2.SIFT_create()
+ensure_dir(path_feats)
+ensure_dir(path_out)
 
-    # Find the keypoints and descriptors with SIFT
-    kp, des = sift.detectAndCompute(imrgb, None)
-    for k in kp:
-        cx, cy = int(k.pt[0]), int(k.pt[1])
-        cv2.circle(im, (cx, cy), 2, (0, 0, 255), -1)
-    cv2.imwrite(outim_path, im)
+# 1. Processar o Template
+print(f"A processar template: {ref_img_path}")
+img_ref = cv2.imread(ref_img_path, cv2.IMREAD_GRAYSCALE)
 
-    combined = np.concatenate((np.array([k.pt for k in kp], dtype=np.float32).T, des.T), axis=0)
-    sio.savemat(outkp_path, {'kp': combined})
+if img_ref is None:
+    print(f"Erro: Não foi possível ler a imagem do template: {ref_img_path}")
+    print("Verifique se o caminho está correto e se o ficheiro existe.")
+    sys.exit(1)
 
+sift = cv2.SIFT_create() # Podes usar ORB se o SIFT for lento, mas SIFT é melhor
+kp_ref, desc_ref = sift.detectAndCompute(img_ref, None)
 
-def process_folder(input_folder, output_folder):
-    # Create output folder if it doesn't exist
-    os.makedirs(output_folder, exist_ok=True)
+# Guardar features do template (necessário para o matching na part1)
+# O formato dos ficheiros segue o padrão somename_NNNN.mat [cite: 81]
+# Mas o template precisa de um nome fixo para a part1 o encontrar.
+sio.savemat(os.path.join(path_feats, "template_features.mat"), {
+    "keypoints": cv2.KeyPoint_convert(kp_ref), # Guarda apenas coordenadas (N, 2)
+    "descriptors": desc_ref
+})
 
-    # Supported image extensions
-    exts = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
+# 2. Processar a Sequência
+files = sorted([f for f in os.listdir(path_imgs) if f.endswith(".jpg") and f != template_name])
 
-    # Iterate over all images in folder
-    for fname in os.listdir(input_folder):
-        if fname.lower().endswith(exts):
-            try:
-                combined = get_keypoints(input_folder, fname, output_folder)
-            except Exception as e:
-                print(f"Failed to process {fname}: {e}")
-
-def warp_and_save(path_ref, path_images_dir, path_output_dir):
-
-
-    # 1. Load template (reference) image to get its size
-    ref_im = cv2.imread(path_ref)
-    if ref_im is None: 
-        return
-    h_ref, w_ref = ref_im.shape[:2]
+for f in files:
+    img_path = os.path.join(path_imgs, f)
+    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
     
-    # 2. Lister les fichiers Homographie générés par part1
-    homography_files = sorted(glob.glob(os.path.join(path_output_dir, "homography_*.mat")))
+    kp, desc = sift.detectAndCompute(img, None)
     
-    if not homography_files:
-        print("No homography files found.")
-        return
+    if kp is None or desc is None:
+        print(f"Aviso: Nenhuma feature encontrada em {f}")
+        continue
 
-    warped_dir = os.path.join(path_output_dir, "warped_images")
-    if not os.path.exists(warped_dir):
-        os.makedirs(warped_dir)
-
-    for h_file in homography_files:
-        seq_num = os.path.splitext(os.path.basename(h_file))[0].split('_')[-1]
-        found_imgs = glob.glob(os.path.join(path_images_dir, f"*{seq_num}.*"))
-        
-        if not found_imgs:
-            continue
-            
-        img_path = found_imgs[0] 
-        curr_im = cv2.imread(img_path)
-        
-        try:
-            mat_data = sio.loadmat(h_file)
-            H = mat_data["H"]
-            
-            warped = cv2.warpPerspective(curr_im, H, (w_ref, h_ref))
-        
-            out_name = f"warped_{seq_num}.jpg"
-            cv2.imwrite(os.path.join(warped_dir, out_name), warped)
-            
-        except Exception as e:
-            print(f"Warping error {seq_num}: {e}")
-            
-    print(f"Rectified images saved in : {warped_dir}")
-
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Pipeline to compute homography between image pairs using SIFT keypoints.")
-    parser.add_argument('path_to_refimg', type=str, help="Path to the reference image")
-    parser.add_argument('path_images_dir', type=str, help="Folder containing input images")
-    parser.add_argument('path_feature_dir', type=str, help="Output folder for feature files (.mat)")
-    parser.add_argument('path_output_dir', type=str, help="Output folder for homography results")
-    args = parser.parse_args()
-
-    # Create output directories if they don't exist
-    if not os.path.exists(args.path_feature_dir):
-        os.makedirs(args.path_feature_dir)
-    if not os.path.exists(args.path_output_dir):
-        os.makedirs(args.path_output_dir)
-
-    print("--- STEP 1 : FEATURES EXTRACTION ---")
-
-    # A. Template Image (Reference)
-    print(f"Extraction features template : {args.path_to_refimg}")
-    ref_dir = os.path.dirname(args.path_to_refimg)
-    ref_name = os.path.basename(args.path_to_refimg)
-    get_keypoints(ref_dir, ref_name, args.path_feature_dir)
-
-    # B. Other Images in Folder
-    print(f"Extraction features sequence : {args.path_images_dir}")
-    process_folder(args.path_images_dir, args.path_feature_dir)
-
-    print("\n--- STEP 2 : PROCESS PART1 ---")
+    # O nome do ficheiro .mat deve corresponder ao da imagem
+    mat_name = f.replace(".jpg", ".mat")
+    save_path = os.path.join(path_feats, mat_name)
     
-    part1.part1(
-        args.path_to_refimg,
-        args.path_images_dir,
-        args.path_feature_dir,
-        args.path_output_dir
-    )
+    sio.savemat(save_path, {
+        "keypoints": cv2.KeyPoint_convert(kp),
+        "descriptors": desc
+    })
+    print(f"Features extraídas: {f}")
 
-    print("\n--- STEP 3 : WARP AND SAVE IMAGES ---")
-    warp_and_save(args.path_to_refimg, args.path_images_dir, args.path_output_dir)
-    
-    print("\n--- PROCESS ENDED ---")
+print("--- Extração concluída. A iniciar Part1 ---")
+
+# Chama a função part1 conforme o PDF [cite: 89, 94]
+part1(ref_img_path, path_imgs, path_feats, path_out)
