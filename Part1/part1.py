@@ -1,186 +1,143 @@
 import numpy as np
-from PIL import Image
-import os 
 import scipy.io as sio
-import cv2              # For FLANN only 
+import scipy.spatial.distance as dist
+import os
 
-def get_data_from_mat(path):
-    """
-    Load file .mat : :
-    Matrix (130, N) where :
-    - Lines 0-1 : Coordenates (x, y)
-    - Lines 2-130 : Descriptors (128 dimensions)
-    (see part1.py)
-    """
-    try: 
-        data = sio.loadmat(path)
-        combined = data['kp'].T
-        return combined[:, 0:2], combined[:, 2:]  #kp, des
-    except Exception as e:
-        print(f"Error loading {path}: {e}")
-        return None, None 
-
-def match_features(des_ref, des_curr, ratio=0.75):
-    """
-    Match features using FLANN based matcher
-    """
-    index_params = dict(algorithm=1, trees=5)
-    search_params = dict(checks=50)
-
-    # flann = cv2.FlannBasedMatcher(index_params, search_params)
-
-    # matches = flann.knnMatch(des_curr.astype(np.float32), des_ref.astype(np.float32), k=2)
-    bf = cv2.BFMatcher()
-    matches = bf.knnMatch(des_curr,des_ref,k=2)
-    matches_curr_idx = [] 
-    matches_ref_idx = [] 
-    
-    # 4. Filter (Lowe's Ratio Test)
-    for m, n in matches:
-        if m.distance < ratio * n.distance:
-            matches_ref_idx.append(m.trainIdx)
-            matches_curr_idx.append(m.queryIdx)
-            
-    return np.array(matches_curr_idx), np.array(matches_ref_idx)
-
-def normalize_points(pts):
-    
-    mean = np.mean(pts, axis=0)
-    dists = np.linalg.norm(pts-mean, axis=1)
-    avg_dist = np.mean(dists)
+def normalize_points(points):
+    """ Normaliza pontos para melhorar a estabilidade do DLT """
+    centroid = np.mean(points, axis=0)
+    shifted = points - centroid
+    avg_dist = np.mean(np.sqrt(np.sum(shifted**2, axis=1)))
     scale = np.sqrt(2) / avg_dist
-
+    
     T = np.array([
-        [scale, 0,     -scale * mean[0]],
-        [0,     scale, -scale * mean[1]],
-        [0,     0,     1               ]
+        [scale, 0, -scale * centroid[0]],
+        [0, scale, -scale * centroid[1]],
+        [0, 0, 1]
     ])
     
-    pts_h = np.column_stack((pts, np.ones(pts.shape[0])))
-    pts_norm = (T @ pts_h.T).T
+    # Transforma pontos para coordenadas homogéneas e aplica T
+    points_h = np.column_stack((points, np.ones(len(points))))
+    points_norm = (T @ points_h.T).T
+    return points_norm[:, :2], T
+
+def compute_homography_dlt(src, dst):
+    """ Calcula H usando DLT (Direct Linear Transform) [cite: 52] """
+    if len(src) < 4: return None
     
-    return pts_norm[:, :2], T
-
-def ransac_homography(p1_norm, p2_norm, N, num_iter=5000, threshold_norm=0.05):
-
-    p1_h_norm = np.column_stack((p1_norm, np.ones(N)))
-
-    best_H_norm = None
-    best_inliers_count = -1
-    best_mask = np.zeros(N, dtype=bool)
-
-    for _ in range(num_iter):
-        # 1 Randomly select 4 points
-        idx = np.random.choice(N, 4, replace=False)
-        s1 = p1_norm[idx]
-        s2 = p2_norm[idx]
-
-        # 2 Build matrix A
-        A_list = []
-        for k in range(4):
-            x, y = s1[k]
-            u, v = s2[k]
-            A_list.append([-x, -y, -1, 0, 0, 0, u*x, u*y, u])
-            A_list.append([0, 0, 0, -x, -y, -1, v*x, v*y, v])
-
-        A = np.array(A_list)
-
-        # 3 Solve Ah = 0 using SVD
-        U, S, Vt = np.linalg.svd(A)
-        H_cand = Vt[-1].reshape(3, 3)
-
-        # 4 Compute projections and errors (P2_proj = H * P1)
-        p2_proj_h = (H_cand @ p1_h_norm.T).T
-        w = p2_proj_h[:, 2:3]
-        w[np.abs(w) < 1e-10] = 1e-10 
-        p2_proj_xy = p2_proj_h[:, :2] / w
-
-        errors = np.linalg.norm(p2_norm - p2_proj_xy, axis=1)
-
-        # 5 Count inliers
-        current_inliers = errors < threshold_norm
-        count = np.sum(current_inliers)
-        
-        if count > best_inliers_count:
-            best_inliers_count = count
-            best_H_norm = H_cand
-            best_mask = current_inliers
-            
-        return best_inliers_count, best_H_norm, best_mask
-
-def compute_homography(pts1, pts2, num_iter=2000, threshold_norm=0.05):
-    N = len(pts1)
-    if N < 4: 
-        return np.eye(3)
-
-    # 1. Normalization
-    p1_norm, T1 = normalize_points(pts1)
-    p2_norm, T2 = normalize_points(pts2)
-
-    # 2. RANSAC Homography Estimation
-    best_inliers_count, H_norm, best_mask = ransac_homography(p1_norm, p2_norm, N, num_iter, threshold_norm)
-
-    # 3. Compute final Homography using all inliers
-    if best_inliers_count >= 4:
-        p1_final = p1_norm[best_mask]
-        p2_final = p2_norm[best_mask]
-        N_inliers = len(p1_final)
-        
-        # 3.1 Build matrix A with all inliers
-        A_final = []
-        for k in range(N_inliers):
-            x, y = p1_final[k]
-            u, v = p2_final[k]
-            A_final.append([-x, -y, -1, 0, 0, 0, u*x, u*y, u])
-            A_final.append([0, 0, 0, -x, -y, -1, v*x, v*y, v])
-            
-        _, _, Vt_final = np.linalg.svd(np.array(A_final))
-        H_norm_final = Vt_final[-1].reshape(3, 3)
-        
-        # 3.2 Denormalize 
-        H_final = np.linalg.inv(T2) @ H_norm_final @ T1
-        
-        # 3.3 Normalize so that H[2,2] = 1
-        if H_final[2, 2] != 0:
-            H_final = H_final / H_final[2, 2]  
-        return H_final
+    # Normalização (Crucial para precisão)
+    src_norm, T_src = normalize_points(src)
+    dst_norm, T_dst = normalize_points(dst)
     
-    else:
-        print("Warning: Not enough inliers found. Returning identity matrix.")
-        return np.eye(3)
-
-
-def part1(path1, path2, path3, path4):
+    num_points = len(src)
+    A = []
     
-    # 1. Load template
-    ref_name = os.path.splitext(os.path.basename(path1))[0]
-    ref_mat_path = os.path.join(path3, ref_name + ".mat")
-    kp_ref, des_ref = get_data_from_mat(ref_mat_path)
+    for i in range(num_points):
+        x, y = src_norm[i][0], src_norm[i][1]
+        u, v = dst_norm[i][0], dst_norm[i][1]
+        
+        # Cria as duas linhas da matriz A para cada ponto
+        A.append([-x, -y, -1, 0, 0, 0, x*u, y*u, u])
+        A.append([0, 0, 0, -x, -y, -1, x*v, y*v, v])
+        
+    A = np.array(A)
+    
+    # SVD para resolver Ah = 0. A solução é o último vetor de V
+    U, S, Vh = np.linalg.svd(A)
+    H_norm = Vh[-1, :].reshape(3, 3)
+    
+    # Desnormalizar: H = inv(T_dst) * H_norm * T_src
+    H = np.linalg.inv(T_dst) @ H_norm @ T_src
+    return H / H[2, 2] # Normalizar para que o ultimo elemento seja 1
 
-    # 2. Iterate on all images in folder
-    for fname in os.listdir(path3):
-        if fname == ref_name + ".mat":
+def part1(path_ref, path_imgs, path_feats, path_out):
+    # 1. Carregar features do template
+    template_data = sio.loadmat(os.path.join(path_feats, "template_features.mat"))
+    kp_ref = template_data["keypoints"]
+    desc_ref = template_data["descriptors"].astype(np.float32)
+
+    # Listar ficheiros de features das imagens de input
+    feat_files = sorted([f for f in os.listdir(path_feats) if f != "template_features.mat"])
+
+    for f in feat_files:
+        # Carregar features do frame atual
+        frame_data = sio.loadmat(os.path.join(path_feats, f))
+        kp_frame = frame_data["keypoints"]
+        desc_frame = frame_data["descriptors"].astype(np.float32)
+
+        if len(kp_frame) < 4:
             continue
-        if not fname.lower().endswith('.mat'):
+
+        # --- MATCHING (Sem CV2) ---
+        # Usamos distancia Euclidiana. Para SIFT funciona bem.
+        # cdist calcula a distancia entre todos os pares
+        dists = dist.cdist(desc_frame, desc_ref, metric='euclidean')
+        
+        # Lowe's Ratio Test (Simples)
+        # Encontra os 2 vizinhos mais próximos para cada ponto do frame
+        sorted_indices = np.argsort(dists, axis=1)
+        matches_src = []
+        matches_dst = []
+        
+        ratio = 0.75
+        for i in range(len(dists)):
+            idx1, idx2 = sorted_indices[i, 0], sorted_indices[i, 1]
+            if dists[i, idx1] < ratio * dists[i, idx2]:
+                matches_src.append(kp_frame[i])
+                matches_dst.append(kp_ref[idx1])
+        
+        matches_src = np.array(matches_src)
+        matches_dst = np.array(matches_dst)
+
+        if len(matches_src) < 4:
+            print(f"Matches insuficientes em {f}")
             continue
-        curr_mat_path = os.path.join(path3, fname)
 
-        ## 2.1 Compute keypoints and descriptors
-        kp_curr, des_curr = get_data_from_mat(curr_mat_path)
+        # --- RANSAC --- 
+        best_H = np.eye(3)
+        max_inliers = 0
+        threshold = 3.0 # Distância em pixels para considerar inlier
+        iterations = 5000 # Ajustar conforme necessário
 
-        ## 2.2 Match features
-        idx_curr, idx_ref = match_features(des_ref, des_curr, ratio = 0.60)
+        for _ in range(iterations):
+            # 1. Amostrar 4 pontos aleatórios
+            idx = np.random.choice(len(matches_src), 4, replace=False)
+            src_sample = matches_src[idx]
+            dst_sample = matches_dst[idx]
 
-        ## 2.3 Compute Homography using RANSAC
-        if len(idx_curr) < 4:
-            H = np.eye(3)
-        else:
-            H = compute_homography(kp_curr[idx_curr], kp_ref[idx_ref], num_iter=2000, threshold_norm=0.05)
+            # 2. Calcular Homografia candidata
+            H_curr = compute_homography_dlt(src_sample, dst_sample)
+            if H_curr is None: continue
+
+            # 3. Contar inliers
+            # Projetar todos os pontos src usando H_curr
+            ones = np.ones((len(matches_src), 1))
+            src_h = np.hstack((matches_src, ones))
+            projected = (H_curr @ src_h.T).T
             
-        # Sauvegarde
-        base_name = os.path.splitext(fname)[0]
-        seq_num = base_name.split('_')[-1]
-        out_path = os.path.join(path4, f"homography_{seq_num}.mat")
-        sio.savemat(out_path, {"H": H})
+            # Evitar divisão por zero
+            with np.errstate(divide='ignore', invalid='ignore'):
+                projected = projected[:, :2] / projected[:, 2:]
+            
+            # Calcular erro (distancia para os pontos de destino reais)
+            errors = np.linalg.norm(projected - matches_dst, axis=1)
+            inliers_mask = errors < threshold
+            num_inliers = np.sum(inliers_mask)
 
+            # 4. Atualizar melhor modelo
+            if num_inliers > max_inliers:
+                max_inliers = num_inliers
+                best_H = H_curr
+                best_inliers_mask = inliers_mask
 
+        # --- REFINAMENTO --- 
+        # Recalcular H usando TODOS os inliers do melhor modelo (Mínimos Quadrados implícito no DLT com N pontos)
+        if max_inliers > 4:
+            final_src = matches_src[best_inliers_mask]
+            final_dst = matches_dst[best_inliers_mask]
+            best_H = compute_homography_dlt(final_src, final_dst)
+
+        # --- GUARDAR RESULTADO --- [cite: 95]
+        out_name = "homography_" + f.replace(".mat", ".mat").split('_')[-1] # formata homography_NNNN.mat
+        sio.savemat(os.path.join(path_out, out_name), {"H": best_H})
+        print(f"Processado {f}: {max_inliers} inliers. H guardado.")
