@@ -2,6 +2,7 @@ import numpy as np
 import scipy.io as sio
 import scipy.spatial.distance as dist
 import os
+import cv2
 
 def normalize_points(points):
     """ Normaliza pontos para melhorar a estabilidade do DLT """
@@ -71,23 +72,23 @@ def part1(path_ref, path_imgs, path_feats, path_out):
         # --- MATCHING (Sem CV2) ---
         # Usamos distancia Euclidiana. Para SIFT funciona bem.
         # cdist calcula a distancia entre todos os pares
-        dists = dist.cdist(desc_frame, desc_ref, metric='euclidean')
+        bf = cv2.BFMatcher()
+        matches = bf.knnMatch(desc_frame,desc_ref,k=2)
+        matches_src = [] 
+        matches_dst = [] 
         
-        # Lowe's Ratio Test (Simples)
-        # Encontra os 2 vizinhos mais próximos para cada ponto do frame
-        sorted_indices = np.argsort(dists, axis=1)
-        matches_src = []
-        matches_dst = []
-        
-        ratio = 0.75
-        for i in range(len(dists)):
-            idx1, idx2 = sorted_indices[i, 0], sorted_indices[i, 1]
-            if dists[i, idx1] < ratio * dists[i, idx2]:
-                matches_src.append(kp_frame[i])
-                matches_dst.append(kp_ref[idx1])
+        # 4. Filter (Lowe's Ratio Test)
+        for m, n in matches:
+            if m.distance < 0.75 * n.distance:
+                matches_src.append(kp_frame[m.queryIdx])
+                matches_dst.append(kp_ref[m.trainIdx])
         
         matches_src = np.array(matches_src)
         matches_dst = np.array(matches_dst)
+
+        print(f"Nombre de correspondances trouvées : {len(matches_src)}")
+        if len(matches_src) > 0:
+            print(f"Format des points : {matches_src.shape}") # Devrait afficher (N, 2)
 
         if len(matches_src) < 4:
             print(f"Matches insuficientes em {f}")

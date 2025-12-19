@@ -4,9 +4,10 @@ import os
 import numpy as np
 
 # Configuração
-path_imgs = "imagens"
-path_out = "output"
-template_path = os.path.join(path_imgs, "20251028_170011.jpg") # O teu template
+path_temp = "Datasets/Taag"
+path_imgs = "Datasets/Taag/sequence"
+path_out = "Datasets/Taag/sequence_homographies"
+template_path = os.path.join(path_temp, "templateTaag.jpg") # O teu template
 
 # Ler o tamanho do template (para saber o tamanho da imagem de saída)
 ref_img = cv2.imread(template_path)
