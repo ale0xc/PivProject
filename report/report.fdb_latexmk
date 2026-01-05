@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1767625737.83148 "c:/Users/acach/OneDrive/Documents/PIV/report/report.tex" "report.pdf" "report" 1767625741.00408 2
+["pdflatex"] 1767627520.73329 "c:/Users/acach/OneDrive/Documents/PIV/report/report.tex" "report.pdf" "report" 1767627523.52217 0
   "C:/Users/acach/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1767622169 96176 40a8022d15c5925d7081b1ad66e03248 ""
   "C:/Users/acach/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/ecsi1000.pk" 1767625520 24544 87d323213eb68e4549d710df8d66d500 ""
   "C:/Users/acach/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/ecss1000.pk" 1766752642 19932 724795456538bbba88ec639844445f03 ""
@@ -12,6 +12,7 @@
   "C:/Users/acach/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1766752255 24225047 7299c4a53a87bf0df47fd70426a1c417 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/ecrm1000.tfm" 993062122 3148 7e594c8240c71e432203f65ab5f95a51 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/ecsi1000.tfm" 993062170 3360 634916b224d09fa611036311cc8b530f ""
+  "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/ecss0800.tfm" 993062232 3132 210522a5f285ef2b785f82479c3624db ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/ecss1000.tfm" 993062234 3140 7eb06dfefee71119860002af13820d26 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/ecss1200.tfm" 993062236 3176 f34de6d605be5cc6bf472e93240318a5 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/ecss1440.tfm" 993062238 3172 4899601a9936b64c50f58b8551c74357 ""
@@ -61,6 +62,11 @@
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/generic/soul/soul-ori.sty" 1686930789 25449 100b0515cc1d8ea1e0366560a3b7ad0c ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/generic/soul/soul.sty" 1686930789 16881 d8b4a12a106b66e472bfd2de30eb0314 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/00miktex/epstopdf-sys.cfg" 1616067285 584 2a1075dd71571459f59146da9f7502ad ""
+  "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/amsmath/amsbsy.sty" 1686931788 2222 499d61426192c39efd8f410ee1a52b9c ""
+  "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/amsmath/amsgen.sty" 1686931787 4173 82ac04dfb1256038fad068287fbb4fe6 ""
+  "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/amsmath/amsmath.sty" 1686931788 88371 d84032c0f422c3d1e282266c01bef237 ""
+  "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/amsmath/amsopn.sty" 1686931788 4474 b811654f4bf125f11506d13d13647efb ""
+  "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/amsmath/amstext.sty" 1686931788 2444 0d0c1ee65478277e8015d65b86983da2 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/anyfontsize/anyfontsize.sty" 1195733377 3901 468c107ba2ff895578a5a95fe5d4bdbe ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/arabi/bblopts.cfg" 1705750854 902 c30e5c373bc58bde21f8f63a3091626f ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/babel-english/english.ldf" 1623001666 7008 9ff5fdcc865b01beca2b0fe4a46231d4 ""
@@ -100,10 +106,10 @@
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/tools/tabularx.sty" 1700599895 7147 d45559f8a31b8c53ada0640516660003 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/tools/xspace.sty" 1700599895 4545 9f5ea23ab1c91476c42749893f790666 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1700127522 55487 80a65caedd3722f4c20a14a69e785d8f ""
-  "c:/Users/acach/OneDrive/Documents/PIV/report/report.tex" 1767625730 10006 c1ccb8f1401adfc34cfe248f943c58a8 ""
+  "c:/Users/acach/OneDrive/Documents/PIV/report/report.tex" 1767627521 11391 2fd550b8726ea8af66529d3833442f99 ""
   "images/tecnico_logo.jpg" 1766750485 14375 f0b38e324d9f9cb81b99612c43ea658d ""
-  "report.aux" 1767625740 2485 a44d358b31e152c4723ea7351c358bd8 "pdflatex"
-  "report.tex" 1767625730 10006 c1ccb8f1401adfc34cfe248f943c58a8 ""
+  "report.aux" 1767627522 3033 b221b87adea96f501ba0f83cdd6851d1 "pdflatex"
+  "report.tex" 1767627521 11391 2fd550b8726ea8af66529d3833442f99 ""
   (generated)
   "report.aux"
   "report.log"
