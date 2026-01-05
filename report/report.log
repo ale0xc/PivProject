@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.26)  5 JAN 2026 17:10
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.26)  5 JAN 2026 22:28
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -384,14 +384,14 @@ Package caption Info: End \AtBeginDocument code.
 * \headsep=25.0pt
 * \topskip=10.0pt
 * \footskip=30.0pt
-* \marginparwidth=65.0pt
-* \marginparsep=11.0pt
+* \marginparwidth=4.0pt
+* \marginparsep=10.0pt
 * \columnsep=10.0pt
 * \skip\footins=9.0pt plus 4.0pt minus 2.0pt
 * \hoffset=0.0pt
 * \voffset=0.0pt
 * \mag=1000
-* \@twocolumnfalse
+* \@twocolumntrue
 * \@twosidefalse
 * \@mparswitchfalse
 * \@reversemarginfalse
@@ -400,47 +400,49 @@ Package caption Info: End \AtBeginDocument code.
 
 LaTeX Warning: No \author given.
 
-LaTeX Font Info:    Trying to load font information for TS1+cmss on input line 76.
+LaTeX Font Info:    Trying to load font information for TS1+cmss on input line 93.
 (C:\Users\acach\AppData\Local\Programs\MiKTeX\tex/latex/base\ts1cmss.fd
 File: ts1cmss.fd 2023/04/13 v2.5m Standard LaTeX font definitions
 )
 <images/tecnico_logo.jpg, id=1, 142.8975pt x 70.299pt>
 File: images/tecnico_logo.jpg Graphic file (type jpg)
 <use images/tecnico_logo.jpg>
-Package pdftex.def Info: images/tecnico_logo.jpg  used on input line 109.
+Package pdftex.def Info: images/tecnico_logo.jpg  used on input line 102.
 (pdftex.def)             Requested size: 135.75186pt x 66.78365pt.
  [1{C:/Users/acach/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}
 
- <./images/tecnico_logo.jpg>] [2]
-LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 149.
- (C:\Users\acach\AppData\Local\Programs\MiKTeX\tex/latex/base\t1cmtt.fd
+
+ <./images/tecnico_logo.jpg>]
+Underfull \hbox (badness 1755) in paragraph at lines 103--104
+ \T1/cmss/bx/n/10 Data Nor-mal-iza-tion[] \T1/cmss/m/n/10 A cru-cial step im-ple-mented is
+ []
+
+
+Overfull \hbox (12.0791pt too wide) detected at line 110
+\OML/cmm/m/it/10 A[] \OT1/cmr/m/n/10 = []
+ []
+
+LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 136.
+(C:\Users\acach\AppData\Local\Programs\MiKTeX\tex/latex/base\t1cmtt.fd
 File: t1cmtt.fd 2023/04/13 v2.5m Standard LaTeX font definitions
-) [3]
-
-LaTeX Warning: Command \texttimes invalid in math mode on input line 200.
-
-
-LaTeX Warning: Command \texttimes invalid in math mode on input line 200.
-
-Missing character: There is no Ö in font cmr10!
-[4] [5] [6] (report.aux)
+) [2] [3] [4] (report.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 7417 strings out of 474486
- 129244 string characters out of 5743754
- 1936542 words of memory out of 5000000
- 29560 multiletter control sequences out of 15000+600000
- 573048 words of font info for 68 fonts, out of 8000000 for 9000
+ 7426 strings out of 474486
+ 129266 string characters out of 5743754
+ 1941542 words of memory out of 5000000
+ 29563 multiletter control sequences out of 15000+600000
+ 575720 words of font info for 74 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 67i,13n,77p,413b,262s stack positions out of 10000i,1000n,20000p,200000b,200000s
- <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1200.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsi1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcss1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1440.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecss1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi603\ecss3583.pk><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb>
-Output written on report.pdf (6 pages, 209119 bytes).
+ 67i,13n,77p,793b,268s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcss1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1200.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsi1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecss1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1440.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecss0900.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx0900.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi603\ecss3583.pk><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb>
+Output written on report.pdf (4 pages, 223947 bytes).
 PDF statistics:
- 352 PDF objects out of 1000 (max. 8388607)
+ 395 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  6 words of extra memory for PDF output out of 10000 (max. 10000000)
 

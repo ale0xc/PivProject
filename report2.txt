@@ -1,0 +1,1055 @@
+PIV Project Report: Paper Tablet 
+
+Nicholas Birch de la Calle Constance Walusiak Zephirin Faure Eric Blohm 
+
+Abstract—This report documents our implementation of a document 
+tracking and rectification system. In Part 1, we estimate 
+homographies from RGB images using SIFT features, RANSACbased 
+outlier rejection, and the normalized DLT algorithm. In 
+Part 2, we extend the system to RGB-D data, using depth 
+information to compute 3D point correspondences and estimate 
+rigid transformations via Procrustes analysis. 
+
+I. PART 1: HOMOGRAPHY ESTIMATION 
+The goal of Part 1 is to estimate homographies that map each 
+frame in a video sequence to a reference template image, 
+enabling perspective-corrected (rectified) views of a planar 
+document. 
+
+A. Feature Detection and Matching 
+We use SIFT [1] to detect keypoints and compute descriptors. 
+SIFT provides robustness to scale and rotation changes, both 
+of which occur frequently during document tracking under 
+camera motion. 
+
+Motivation: We chose SIFT over simpler detectors (e.g., 
+Harris, FAST) for its scale invariance, since the document occupies 
+varying image regions as the camera moves. SIFT also 
+handles arbitrary document orientations through its rotation 
+invariance. Unlike deep learning approaches, SIFT requires 
+no training data and remains interpretable. 
+
+Feature matching is performed using a KD-tree for efficient 
+nearest-neighbor search. We apply Lowe’s ratio test to filter 
+matches: a match is accepted only if the distance to the nearest 
+neighbor is less than 0.75 
+times the distance to the secondnearest 
+neighbor: 
+
+d1 
+< 
+0.75 
+· 
+d2 
+(1) 
+
+Motivation for the 0.75 threshold: This ratio test eliminates 
+ambiguous matches where the descriptor is similarly close to 
+multiple candidates, indicating either texture ambiguity or a 
+potentially incorrect match. The value 0.75 follows Lowe’s 
+recommendation [1]; it rejects matches whose two closest 
+descriptors are too similar while preserving accurate correspondences 
+in textured regions. Lower thresholds (e.g., 0.5) 
+discard many matches in low-texture areas, whereas higher 
+thresholds (e.g., 0.9) retain more false positives. 
+
+This threshold rejects ambiguous matches where multiple 
+descriptors are similarly close. 
+
+B. RANSAC for Outlier Rejection 
+Given a set of candidate correspondences, we use RANSAC 
+to robustly estimate the homography while rejecting outlier 
+matches caused by occlusions, texture ambiguities, or moving 
+objects. 
+
+To avoid unnecessary RANSAC invocations on extremely 
+weak match sets, a minimum of 10 putative matches is 
+required before attempting homography estimation. 
+
+Motivation: Even with Lowe’s ratio test, false matches persist 
+in low-texture regions and under occlusions. A least-squares 
+fit fails with even a few outliers. RANSAC addresses this by 
+iteratively searching for the largest inlier set, tolerating the 
+noise present in real video data. 
+
+The algorithm repeatedly samples minimal sets of s 
+=4 
+point correspondences (the minimum required to determine a 
+homography) and selects the model with the largest inlier set. 
+A correspondence is classified as an inlier if the reprojection 
+error is below 3.0 pixels: 
+
+∥p2 
+− 
+pˆ2∥ 
+< 
+3.0, 
+where pˆ2 
+= 
+Hp1 
+(2) 
+
+Motivation for 3.0 pixels: This threshold was empirically 
+determined by analyzing localization error in our video data. 
+At typical working distances and camera resolutions, 3.0 pixels 
+corresponds to approximately 1–2 mm of document surface, 
+capturing the sensor noise floor while rejecting matches that 
+diverge significantly due to misidentification or occlusion. 
+
+The number of iterations k 
+is computed adaptively based on 
+the current inlier ratio w: 
+
+log(1 
+− 
+p)
+
+k 
+= 
+(3)
+
+log(1 
+− 
+ws) 
+where p 
+=0.99 
+is the desired probability of finding a 
+good model. The iteration count is capped at 2000 to bound 
+computation time. 
+
+Motivation for 2000 iterations and p=0.99: The adaptive 
+formula reduces iterations when the inlier ratio is high and 
+increases them when it is low. Setting p 
+=0.99 
+gives a 99% 
+chance of sampling a good model while remaining computationally 
+tractable. The 2000-iteration cap bounds computation 
+on difficult frames; in practice, convergence occurs well before 
+this limit. 
+
+C. Homography Estimation via Normalized DLT 
+Once inliers are identified, the homography is refined using 
+the Direct Linear Transform (DLT) algorithm with Hartley 
+normalization for numerical stability. 
+
+Motivation for Hartley normalization: The DLT algorithm 
+solves a linear system Ah 
+=0 
+via SVD. Without normalization, 
+the matrix A 
+can be ill-conditioned when coordinates 
+span disparate scales (e.g., pixel coordinates from 0 to 1920 
+mixed with homogeneous coordinates), leading to numerical 
+instability. Hartley normalization rescales coordinates to a 
+
+1 
+
+
+standard range, improving the condition number and producing 
+more accurate homographies. This step is standard practice and 
+recommended by Hartley and Zisserman [2]. 
+
+1) Hartley Normalization: Before solving the linear system, 
+both point sets are normalized so that their centroid is at the
+√ 
+
+
+origin and their average distance from the origin is 2. This 
+is achieved by two transformation matrices, one for each point 
+set (i 
+=1, 
+2): 
+
+ 
+
+
+si 
+0 
+−si 
+· 
+x¯ 
+i 
+Ti 
+= 
+0 
+si 
+−si 
+· 
+y¯ 
+i 
+(4) 
+
+00 
+1 
+
+
+√ 
+
+
+where (x¯ 
+i,y¯ 
+i) 
+is the centroid and si 
+=2/d¯ 
+i 
+is the scaling 
+¯
+
+factor with di 
+being the average distance to the centroid for 
+that set. The normalized points are obtained as: 
+
+p˜1 
+= 
+T1p1, 
+p˜2 
+= 
+T2p2 
+(5) 
+
+2) DLT Formulation: For each normalized correspondence 
+(˜x1,y˜1) 
+↔ 
+(˜x2,y˜2), the homography constraint p˜2Hnormp˜1 
+= 
+0 
+yields two linear equations. Stacking all correspondences 
+gives an overdetermined system Ah 
+=0, where h 
+contains 
+the 9 entries of Hnorm. 
+The solution is found via SVD: A 
+= 
+UΣV 
+T 
+, and h 
+is the last 
+column of V 
+(corresponding to the smallest singular value). 
+The resulting Hnorm is denormalized: 
+
+H 
+= 
+T2 
+−1HnormT1 
+(6) 
+
+and normalized so that H3,3 
+=1. 
+
+D. Tracking Strategy 
+Our pipeline processes frames using a combination of direct 
+matching and a keyframe-based chaining strategy to handle 
+drift and temporary occlusions: 
+
+Motivation: Matching every frame directly against the template 
+fails when the document rotates significantly or is 
+occluded. Keyframe chaining allows a frame to be tracked via 
+an intermediate keyframe when direct template matching fails. 
+The conservative keyframe update rule (15 inliers required) 
+limits drift accumulation from weak intermediate links. 
+
+1) Direct Matching: Each frame is first matched directly 
+against the template. If a strong match is found (at least 
+15 inliers), the homography is computed directly, and the 
+current frame is designated as the new reliable keyframe. 
+Choice of 15 inliers: This threshold was empirically 
+tuned to balance reliability and coverage. Fewer inliers 
+would accept unreliable keyframes; more inliers would 
+miss opportunities to update and cause tracking to fail 
+when the template has poor visibility. 
+2) Keyframe Chaining: If direct matching fails to meet the 
+strict inlier threshold, the frame is matched against the 
+most recent reliable keyframe. If this chain produces a 
+valid transformation (at least 8 inliers), the homography 
+is composed: 
+
+Hframe→template = 
+Hkeyframe→template · 
+Hframe→keyframe (7) 
+
+Choice of 8 inliers for chaining: A lower threshold 
+(8 vs. 15) is acceptable here because we are only 
+estimating relative motion between two nearby frames, 
+which typically has better visibility than direct template 
+matching. The reduced threshold allows tracking to 
+continue when visibility is marginal, while 8 inliers still 
+provides enough geometric constraint to avoid spurious 
+solutions. 
+Note that while this allows tracking to continue, the reference 
+keyframe is only updated when a frame matches 
+the template directly or through a very strong chain (15 
+inliers), preventing drift accumulation from weak links. 
+
+3) Backward Pass: To handle frames at the beginning of 
+the sequence that may have poor direct visibility of 
+the template, we perform a backward pass using the 
+same keyframe logic, propagating valid transformations 
+in reverse order from the first successfully tracked frame. 
+Motivation for backward pass: Early frames may be 
+occluded or at extreme viewpoints. The forward pass 
+identifies the first trackable frame as an anchor. The 
+backward pass then links earlier frames to this anchor. 
+This two-pass strategy handles sequences where the first 
+frames lack direct template visibility. 
+The homography H 
+estimated in this pipeline maps points 
+from the current frame coordinate system to the template. 
+For rectification, this transformation is used to warp the frame 
+content back onto the reference template plane. 
+
+Summary of Part 1: The homography estimation pipeline 
+combines SIFT-based feature matching, Lowe’s ratio test, 
+RANSAC outlier rejection, and normalized DLT to track a 
+planar document across video frames. The keyframe-based 
+chaining strategy with forward and backward passes handles 
+occlusions and viewpoint changes. 
+
+II. PART 2: RGB-D POINT CLOUD REGISTRATION 
+In this section, we aim to register a set of RGB-D frames to a 
+reference template to recover the rigid geometry of the scene. 
+Unlike the sequential video processing in Part 1, the input 
+frames here are not assumed to be consecutive or optimally 
+ordered. Consequently, we cannot rely on simple frame-toframe 
+chaining. Instead, we must dynamically determine the 
+processing sequence by sorting frames based on the quality 
+of their feature matches with the template or previous frames. 
+Once the optimal path is established, the point clouds are registered 
+using Orthogonal Procrustes analysis, which provides a 
+closed-form solution for determining the optimal rotation and 
+translation between 3D correspondences [3], [4]. 
+
+2 
+
+
+A. 3D Reconstruction & Data Preparation 
+Using the pinhole camera model, a pixel (u, 
+v) 
+with depth d 
+is projected into 3D camera coordinates (X, 
+Y, 
+Z) 
+through 
+
+Z 
+= 
+d, 
+(8) 
+X 
+= 
+(u 
+− 
+cx) 
+d 
+,
+fx 
+(9) 
+Y 
+= 
+(v 
+− 
+cy) 
+d 
+,
+fy 
+(10) 
+
+and its Singular Value Decomposition (SVD), H 
+= 
+UΣV 
+T 
+. 
+This leads to the optimal closed-form solution for the rotation 
+matrix R: 
+
+R 
+= 
+UV 
+T 
+(16) 
+
+3) Reflection Correction: The SVD solution R 
+= 
+UV 
+T 
+may produce a reflection rather than a proper rotation if 
+det(UV 
+T 
+)= 
+−1. To ensure R 
+∈ 
+SO(3) 
+(i.e., a proper 
+rotation with det(R)=1), we modify the solution by flipping 
+the sign of the last singular axis: 
+where (fx,fy) 
+are the focal lengths and (cx,cy) 
+is the princi
+
+
+
+
+ 
+
+
+pal point of the camera. The resulting 3D point is therefore 
+
+(u 
+− 
+cx)d 
+
+
+
+
+ 
+
+
+10 
+0 
+
+
+
+
+01 
+0 
+ 
+V 
+T 
+. 
+(17)
+
+R 
+= 
+U 
+
+
+0 
+0 
+det(UV 
+T 
+)
+
+
+ 
+
+
+
+ 
+
+
+fx 
+(v 
+− 
+cy)d 
+
+
+fy 
+
+
+. 
+
+
+(11)
+
+P3D 
+= 
+
+
+If det(UV 
+T 
+) 
+= 
++1, the matrix is unchanged. If det(UV 
+T 
+)= 
+
+
+−1, the entry at (3, 
+3) 
+becomes −1, which flips the third axis. 
+
+d 
+
+
+B. Procrustes Analysis 
+The goal of Procrustes analysis is to find the optimal rigid 
+transformation (rotation R 
+and translation T 
+) that aligns a 
+
+′ 
+′′ 
+
+
+source point set P 
+= 
+{p1,...,p 
+} 
+to a target point set
+
+N 
+
+
+P 
+= 
+{p1,...,pN 
+}. We minimize 
+
+N
+
+X 
+
+
+This corrects the mirroring, turning the reflection into a proper 
+rotation while keeping the alignment of the first two axes intact 
+[4]. 
+
+C. Robust Estimation Pipeline 
+Our tracking implementation diverges from simple sequential 
+processing to maximize robustness against occlusions and 
+
+varying overlap. The pipeline consists of four distinct stages: 
+
+∥pi 
+− 
+(Rp 
+′ 
+i 
++ 
+T 
+)∥2 
+(12)
+
+arg 
+min
+
+R,T 
+
+
+3D feature matching, anchor selection, greedy path planning, 
+
+i=1 
+
+
+point correspondences. In our setting this assumption is 
+
+TwhereandRRI 
+det(R)1== 
+. 
+Unlike ICP[5],thisformulationknown point-to-assumes 
+satisfiedbecauseallframesexpressed inareacommon 
+viacompositionofpreviouslyestimatedtransformations.Thisreducesregistration closed-formorthogonalProcrustestoa 
+problemratherthan iterative closest-pointsearch. an 
+X 
+
+
+′
+
+template coordinate system. Each observed point p 
+is
+
+i 
+
+
+associated with the same template point pi, either directly or 
+
+1) Translation Estimation: Taking the derivative with respect 
+to T 
+: 
+NN
+
+X
+
+∂ 
+
+
+and transformation propagation. 
+
+1) 3D Feature Matching: For every pair of images (templateto-
+frame or frame-to-frame), we detect SIFT features and 
+extract descriptors. Correspondences are established using a 
+Given a set of 2D matches (u, 
+v) 
+↔ 
+(u 
+′ 
+), we lift these 
+
+Brute Force Matcher with the L2 
+norm and a cross-check 
+consistency filter. 
+′ 
+
+
+,v 
+points to 3D using the corresponding depth maps Z(u, 
+v) 
+and the intrinsic matrix K. Any match with an invalid depth 
+value (Z 
+≤ 
+0) is discarded. This yields two aligned point 
+clouds, Psrc 
+and Pdst, ready for registration. 
+
+2) Anchor Frame Selection: To initialize the tracking, we 
+∥pi 
+− 
+Rp 
+′ 
+i 
+− 
+T 
+∥2 
+= 
+−2(pi 
+− 
+Rpi 
+′ 
+− 
+T 
+)=0 
+(13) do not arbitrarily start with the first frame in the directory
+
+∂T 
+
+
+i=1 
+i=1 
+sequence. Instead, we search for the ”best” frame to serve as 
+a global anchor. 
+
+which gives 
+
+′ 
+
+
+1
+
+X 
+
+
+′ 
+
+
+1
+
+X 
+
+
+′ 
+
+
+i. 
+(14) 
+
+Motivation: Starting with the first frame risks initializing 
+
+with a poor view of the template (e.g., occlusion, extreme 
+
+T 
+= 
+p¯ 
+− 
+Rp¯ 
+,p¯= 
+pi,p¯= 
+p
+
+N 
+
+
+N 
+
+
+X 
+
+
+ii 
+
+
+viewpoint, or motion blur). A frame with weak template
+
+2) Rotation Estimation: By defining centered points the transvisibility 
+yields few inliers and inaccurate transformations,
+
+′ 
+′′
+
+lation can be excluted: qi 
+= 
+pi 
+− 
+p¯ 
+and q 
+= 
+p 
+− 
+p¯ 
+. We 
+
+ii 
+propagating errors through the sequence. Selecting a frame 
+
+minimize 
+
+with maximum overlap reduces initialization error. 
+
+N 
+
+
+We iterate through the entire sequence, matching every frame 
+
+∥qi 
+− 
+Rqi 
+′ 
+∥2 
+,RT 
+R 
+= 
+I. 
+(15)
+
+arg 
+min
+
+R 
+
+
+Fi 
+directly against the reference template. For each frame, we
+
+i=1 
+
+
+estimate the rigid transformation using RANSAC-Procrustes. 
+
+P
+
+As established by Arun et al. [3], this problem is solved The frame that yields the highest number of inliers (indicating 
+
+′ 
+)T 
+
+
+i
+
+by computing the cross-covariance matrix H 
+
+
+the most reliable view of the template) is selected as the
+
+= 
+qi(q 
+
+
+3 
+
+
+starting point (Fstart). 
+
+3) Greedy Sequence Ordering: To handle large viewpoint 
+changes where frames may not overlap with the template but 
+do overlap with their neighbors, we dynamically determine the 
+processing order. 
+Motivation: Temporal frame ordering is suboptimal when large 
+camera rotations or occlusions break continuity with the template. 
+Ordering frames based on visual overlap (inlier count) 
+ensures each transformation is computed between frames with 
+sufficient geometric correlation. Frames that temporarily lose 
+template visibility can still be tracked via intermediate frames. 
+
+Starting from the anchor frame Fstart, we employ a greedy 
+strategy: 
+
+1) Let Fcurr 
+be the most recently processed frame. 
+2) We compare Fcurr 
+against all remaining unprocessed 
+frames. 
+3) The frame Fnext 
+that maximizes the number of geometric 
+inliers with Fcurr 
+is selected as the next frame in the 
+sequence. 
+This ensures that transformations are always computed 
+between pairs of frames with maximum visual overlap, 
+reducing the risk of tracking loss. 
+
+4) Transformation Propagation: The global trajectory is recovered 
+by composing relative transformations. First, the 
+absolute pose of the anchor frame relative to the template, 
+(Racc,tacc), is computed. For every subsequent frame in the 
+ordered sequence, we compute the relative transformation 
+(Rrel,trel) 
+between the current frame and the previous one. 
+The global pose is updated recursively: 
+Rnew 
+= 
+RrelRacc,tnew 
+= 
+Rreltacc 
++ 
+trel. 
+(18) 
+
+5) RANSAC Implementation: To ensure the estimated transforms 
+are robust to outliers (e.g., mismatches or moving 
+objects), we wrap the Procrustes analysis in a RANSAC loop. 
+Motivation and parameter selection: RANSAC handles feature 
+mismatches and occlusions. We set 800 iterations to balance 
+accuracy and runtime. The inlier threshold of 0.07 meters (7 
+cm) was determined through ablation on our RGB-D sensor: 
+distances below this threshold correspond to correctly matched 
+points, while larger distances indicate mismatches. Thresholds 
+below 0.07 m rejected valid points due to sensor noise; 
+thresholds above 0.07 m admitted spurious correspondences. 
+
+In each iteration: 
+
+1) We randomly sample a minimal subset of 3 point pairs. 
+2) A hypothesis (R, 
+t) 
+is estimated using the closed-form 
+SVD method. 
+3) We compute the reprojection error for all points; inliers 
+are defined as points with an error below a threshold of 
+0.07 
+m. 
+The final transformation is re-estimated using the Procrustes 
+method on the largest set of inliers found. 
+
+Summary of Part 2: The RGB-D tracking system extends 
+2D homography estimation to 3D rigid motion recovery. By 
+selecting anchor frames with strong template matches, ordering 
+frames by visual overlap rather than temporal sequence, 
+and wrapping Procrustes in RANSAC, we obtain 3D trajectory 
+estimates that tolerate occlusions and feature mismatches. 
+
+III. PART 3: APPLICATION -FORM VALIDATION 
+Building on the tracking pipeline, we implemented an automated 
+form validation system to detect whether specific 
+fields (e.g., “Name”, “Surname”) have been filled in a video 
+sequence. 
+
+A. Field Definition and Preprocessing 
+We manually defined Regions of Interest (ROIs) on the 
+template image to specify the zones to be monitored. The 
+input video is subsampled (every 5th frame) to reduce redundancy. 
+Each processed frame is rectified using the homography 
+pipeline established in Part 1, warping the current camera view 
+Icurr to the template coordinate system. The first successfully 
+rectified frame is cached as the empty reference Iref, which 
+serves as the baseline for background subtraction. 
+
+B. Ink Detection Algorithm 
+To detect writing while robustly ignoring the user’s hand 
+and dynamic shadows, we employ a difference-based edge 
+detection pipeline. 
+
+1) Difference and Edge Extraction: We compute the absolute 
+difference map D 
+= 
+|Icurr − 
+Iref| 
+and apply Canny edge 
+detection [6] (thresholds 15, 60). 
+Motivation: Simple intensity thresholding is sensitive 
+to lighting changes from shadows cast by the writing 
+hand. Canny edge detection focuses on gradients, isolating 
+pen strokes while ignoring the smoother gradients of shadows. 
+
+2) Hand Rejection via Morphology: Distinguishing pen 
+strokes from the edges of the hand or arm is difficult as both 
+produce edges in the difference image. We apply morphological 
+closing with a 15 
+× 
+15 
+rectangular kernel to the edge map, 
+followed by contour analysis. 
+Motivation: Writing strokes are thin and sparse, whereas 
+the hand is a large, solid object. The morphological closing 
+operation connects the dense edge texture of the hand into a 
+single large “blob,” while leaving sparse text contours distinct. 
+We then filter contours based on their area relative to the total 
+view size: 
+
+Acontour < 
+0.15 
+· 
+Atotal (19) 
+
+Contours exceeding 15% of the total area are classified as 
+occlusions (hand/arm) and discarded, while contours with A< 
+5 
+pixels are removed as noise. 
+
+4 
+
+
+C. Temporal Validation Logic 
+A field is flagged as “filled” only if the number of valid 
+ink contours exceeds a threshold (15) for k 
+=3 
+consecutive 
+frames. 
+
+Motivation: During the writing process, the hand introduces 
+significant motion blur, occlusions, and homography jitter. 
+This temporal persistence check ensures that the system waits 
+for the view to stabilize and the hand to move away before 
+confirming the data, preventing false positives during the 
+actual writing action. 
+
+IV. EXPERIMENTAL SETUP AND EVALUATION 
+For Part 1, we evaluate the homography estimation pipeline 
+using a single template and three RGB sequences (10 frames) 
+of increasing difficulty: a fully visible planar case, a planar 
+sequence with temporary occlusions, and a sequence with 
+out-of-plane motion violating the homography assumption. 
+Evaluation is based on qualitative rectification consistency and 
+tracking statistics extracted from execution logs, including the 
+proportion of frames tracked via direct matching, chaining, or 
+identity fallback, as well as typical RANSAC inlier counts. 
+
+For Part 2, we evaluated our system on four datasets: three 
+provided by the instructor and one sourced from public repositories 
+to validate generalization. We assessed 3D tracking 
+performance using frame-to-frame transformation consistency 
+and visual inspection of reconstructed point clouds from the 
+Google Drive videos. 
+
+V. RESULTS & DISCUSSION 
+A. Part 1 
+
+Planar visible Planar occluded Out-of-plane 
+DIRECT 
+CHAIN 
+IDENTITY 
+Mean #matches 
+Mean inlier ratio 
+90% 100% 
+10% 0% 
+0% 0% 
+∼1400 ∼2000 
+∼37% ∼43% 
+60% 
+10% 
+30% 
+∼950 
+∼23% 
+
+TABLE I 
+SUMMARY OF TRACKING PERFORMANCE. 
+
+
+Fig. 1. Superposition of rectified frames for the three sequences. 
+
+The results indicate that homography estimation remains reliable 
+as long as the planar assumption is satisfied. Both planar 
+sequences achieve a high proportion of direct tracking, supported 
+by large numbers of feature matches and stable mean 
+inlier ratios. The presence of temporary occlusions does not 
+
+significantly affect performance, as direct template matching 
+remains sufficient throughout the sequence. In contrast, the 
+sequence with out-of-plane motion exhibits a clear reduction 
+in inlier ratios and an increased use of chaining and identity 
+fallback, reflecting the breakdown of the homography model. 
+
+These trends are consistent with the superposed rectified 
+images above, which show stable alignment in planar cases 
+and increasing misalignment when planarity is violated. 
+
+B. Part 2 
+
+Detailed results and trajectory visualizations for all three test 
+sequences are available at: 
+
+https://drive.google.com/drive/folders/1FVIDSzXdTXk47 
+wwjtQW8xxClL21akjb?usp=share link 
+
+By studying the videos on the drive, we observed that our 
+application performs significantly worse on one dataset compared 
+to the others, specifically the airplane safety sheet. 
+Empirical testing revealed that the template exhibits poor 
+overlap with most frames, producing few matches of low 
+quality. As a result, the anchor frame introduce substantial 
+error, which propagates through the entire sequence when 
+composing transformations. 
+
+Future work should focus on improving robustness in cases 
+where the template yields few matches. For this dataset, 
+incorporating a plane-fitting algorithm could help mitigate 
+these issues and enhance overall performance. 
+
+Once a globally consistent point cloud is reconstructed, the 
+resulting geometry provides a foundation for higher-level 
+perception tasks. Deep networks that operate directly on point 
+clouds can leverage the reconstructed scene without relying 
+depth sensors. PointNet was the first to show that such 
+networks could perform object classification and segmentation 
+directly on point clouds. This demonstrates how dense, registered 
+geometry supports downstream 3D vision applications 
+beyond the registration step itself [7]. Thus, the proposed 
+pipeline functions not only as an alignment mechanism but 
+also as a core pillar for learning-based 3D vision. 
+
+C. Part 3 
+
+The morphological approach successfully detects ink in most 
+cases. However, a critical limitation emerges: when the hand 
+passes over a field and then leaves, the system cannot definitively 
+distinguish between pen strokes and hand edges in the 
+difference image. This can lead to false positives, where a 
+field is marked as filled even though only the hand crossed it 
+without writing. 
+
+Potential improvement: Deep learning-based hand detection 
+(e.g., using MediaPipe or YOLO-based hand detectors) could 
+mitigate this issue by explicitly segmenting and masking hand 
+regions before ink detection. By removing hand pixels from 
+the edge map before contour analysis, the system could ensure 
+that only genuine pen strokes contribute to field validation, 
+
+5 
+
+
+significantly reducing false positives while maintaining robustness 
+to occlusions during actual writing. 
+
+VI. CONCLUSION 
+This report presented a pipeline for document tracking and 
+rectification across RGB and RGB-D modalities. Part 1 
+demonstrated 2D homography estimation using SIFT features, 
+RANSAC outlier rejection, and keyframe-based chaining, 
+producing perspective-corrected views despite occlusions 
+and viewpoint changes. Part 2 extended this to 3D using 
+depth data and Procrustes analysis, with anchor selection and 
+greedy frame ordering to handle large viewpoint variations. 
+Both systems use parameter tuning and multi-pass tracking 
+strategies to handle noise and occlusions. 
+
+REFERENCES 
+
+[1] D. G. Lowe, “Distinctive image features from scale-invariant keypoints,” 
+International journal of computer vision, vol. 60, no. 2, pp. 91–110, 2004. 
+[2] R. Hartley and A. Zisserman, Multiple view geometry in computer vision. 
+Cambridge university press, 2003. 
+[3] K. S. Arun, T. S. Huang, and S. D. Blostein, “Least-squares fitting of 
+two 3-d point sets,” IEEE Transactions on Pattern Analysis and Machine 
+Intelligence, vol. PAMI-9, no. 5, pp. 698–700, 1987. 
+[4] S. Umeyama, “Least-squares estimation of transformation parameters 
+between two point patterns,” IEEE Transactions on Pattern Analysis and 
+Machine Intelligence, vol. 13, no. 4, pp. 376–380, 1991. 
+[5] P. Besl and N. D. McKay, “A method for registration of 3-d shapes,” IEEE 
+Transactions on Pattern Analysis and Machine Intelligence, vol. 14, no. 2, 
+pp. 239–256, 1992. 
+[6] J. Canny, “A computational approach to edge detection,” IEEE Transactions 
+on pattern analysis and machine intelligence, no. 6, pp. 679–698, 
+1986. 
+[7] C. R. Qi, H. Su, K. Mo, and L. J. Guibas, “Pointnet: Deep learning 
+on point sets for 3d classification and segmentation,” CoRR, vol. 
+abs/1612.00593, 2016. [Online]. Available: http://arxiv.org/abs/1612. 
+00593 
+

@@ -4,9 +4,9 @@ import os
 import numpy as np
 
 # Configuração
-path_imgs = "imagens"
-path_out = "output"
-template_path = os.path.join(path_imgs, "20251028_170011.jpg") # O teu template
+path_imgs = "Datasets/Taag/sequence"
+path_out = "Datasets/Taag/sequence_homographies"
+template_path = "Datasets/Taag/templateTaag.jpg"
 
 # Ler o tamanho do template (para saber o tamanho da imagem de saída)
 ref_img = cv2.imread(template_path)
@@ -38,7 +38,7 @@ for mat_file in mat_files:
     # Isto simula o que um scanner faria
     warped_img = cv2.warpPerspective(img, H, (w_ref, h_ref))
 
-    # 4. Mostrar Lado a Lado
+    # 4. Salvar Lado a Lado
     # Redimensionar para caber no ecrã se for muito grande
     display_h = 400
     scale = display_h / h_ref
@@ -46,8 +46,27 @@ for mat_file in mat_files:
     img_s = cv2.resize(img, (int(img.shape[1]*scale), int(img.shape[0]*scale)))
     warp_s = cv2.resize(warped_img, (int(w_ref*scale), int(h_ref*scale)))
     
-    cv2.imshow("Original (Input)", img_s)
-    cv2.imshow("Retificada (Output)", warp_s)
+    # Garantir que as duas imagens têm a mesma altura para colocá-las lado a lado
+    max_h = max(img_s.shape[0], warp_s.shape[0])
+    
+    # Adicionar padding se necessário
+    img_s_padded = cv2.copyMakeBorder(img_s, 0, max_h - img_s.shape[0], 0, 0, cv2.BORDER_CONSTANT, value=[255, 255, 255])
+    warp_s_padded = cv2.copyMakeBorder(warp_s, 0, max_h - warp_s.shape[0], 0, 0, cv2.BORDER_CONSTANT, value=[255, 255, 255])
+    
+    # Concatenar lado a lado
+    combined = cv2.hconcat([img_s_padded, warp_s_padded])
+    
+    # Criar diretório de saída se não existir
+    output_dir = "output"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    # Salvar a imagem combinada
+    output_name = f"{output_dir}/combined_{suffix}.jpg"
+    cv2.imwrite(output_name, combined)
+    print(f"Salvo: {output_name}")
+    
+    cv2.imshow("Original (Input) | Retificada (Output)", combined)
     
     key = cv2.waitKey(0)
     if key == ord('q'):
