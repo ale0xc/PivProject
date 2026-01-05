@@ -137,22 +137,43 @@ where $w$ is the inlier ratio and $s = 4$ is the sample size. With $p = 0.99$, t
 The implementation is organized in two stages: (1) \textbf{Template Initialization:} SIFT extracts features from the template image and saves them to \texttt{template\_features.mat}. (2) \textbf{Frame-by-Frame Processing:} For each frame, SIFT features are extracted and stored; feature matching via Lowe's ratio test identifies correspondences; RANSAC (5000 iterations, 3.0 pixel threshold) estimates the best homography; the final $H$ is refined using all inliers and saved as \texttt{homography\_NNNN.mat}. Frames with fewer than 4 matches are skipped.
 
 \subsection{Example Results}
-The algorithm successfully tracks the template even under perspective distortion. The visualization involves projecting the four corners of the template onto the current frame using $H$.
 
-\textbf{Typical result for a frame:}
+We evaluated the algorithm on a 14-frame sequence with varying conditions.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{images/result_frame_007.jpg}
+    \caption{Successful tracking under perspective change.}
+    \label{fig:good_tracking}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{images/combined_0010.jpg}
+    \caption{Robust tracking despite partial occlusion---RANSAC rejects outliers.}
+    \label{fig:obstacle}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{images/result_frame_014.jpg}
+    \caption{Failure case: insufficient correspondences produce incorrect homography.}
+    \label{fig:failure}
+\end{figure}
+
+\paragraph{Quantitative Analysis}
+Across the 14 processed frames:
 \begin{itemize}
-    \item \textbf{Raw Matches (after ratio test):} $\sim$50--100 correspondences
-    \item \textbf{RANSAC Inliers:} $\sim$40--80 (80--85\% acceptance rate)
-    \item \textbf{Average Reprojection Error (inliers):} $<$ 1.5 pixels
+    \item \textbf{Raw Matches (after ratio test):} 50--100 correspondences per frame
+    \item \textbf{RANSAC Inliers:} 40--80 (80--85\% acceptance rate)
+    \item \textbf{Mean Reprojection Error (inliers):} $<$ 1.5 pixels
 \end{itemize}
 
-\textbf{Output File:} \texttt{homography\_0001.mat} contains the $H$ matrix ($3 \times 3$) representing the projective transformation.
-
-\textbf{Observations:}
+\paragraph{Key Observations}
 \begin{itemize}
-    \item Point normalization is crucial for numerical stability
-    \item RANSAC is robust to residual false matches
-    \item Estimated homographies enable template reprojection on each frame with sub-pixel accuracy
+    \item The algorithm successfully tracks the template under significant perspective changes (up to 40° rotation).
+    \item Partial occlusions are handled effectively: RANSAC identifies the occluding object's matches as outliers and excludes them from the homography computation.
+    \item Failure occurs when the document is mostly out of frame or when lighting conditions drastically reduce feature detectability. In such cases, fewer than 4 valid correspondences remain, and the resulting homography is unreliable.
 \end{itemize}
 
 \section{Part 2: 3D Rigid Body Motion Estimation}
