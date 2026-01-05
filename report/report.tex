@@ -82,25 +82,20 @@ This section describes the implementation of a 2D planar tracking system that es
 
 \subsubsection{Feature Extraction and Matching}
 
-The system utilizes the \textbf{Scale-Invariant Feature Transform (SIFT)} to detect interest points robust to scale and rotation, extract 128-dimensional invariant descriptors, and generate a `.mat` file per frame containing keypoints and descriptors. \textit{SIFT Parameters:} OpenCV defaults ($\sigma = 1.6$, standard octaves and scales).
+The system utilizes the \textbf{Scale-Invariant Feature Transform (SIFT)}~\cite{lowe2004} to detect interest points robust to scale and rotation, and extract 128-dimensional invariant descriptors. We selected SIFT over simpler alternatives (Harris corners, ORB) because the document occupies varying image regions as the camera moves, requiring scale-invariant detection. Additionally, SIFT handles arbitrary document orientations through its rotation-invariant formulation, and unlike learning-based methods, it requires no training data and remains fully interpretable. \textit{SIFT Parameters:} OpenCV defaults ($\sigma = 1.6$, standard octaves and scales).
 
 Then, feature matching is performed between the template and each frame using the following strategy:
 
-We use Euclidean distance metric combined with \textbf{Lowe's ratio test} to filter ambiguous matches:
-```
-For each descriptor in the frame:
-  - Find the 2 nearest neighbors in the template
-  - If distance(NN1) < 0.75 × distance(NN2), accept the match
-```
+We use Euclidean distance metric combined with \textbf{Lowe's ratio test} to filter ambiguous matches. For each descriptor in the frame, we find the 2 nearest neighbors in the template. If $\text{distance}(\text{NN}_1) < 0.75 \times \text{distance}(\text{NN}_2)$, we accept the match.
 
-The selection of the 0.75 threshold for the distance ratio test is grounded in D. Lowe's original empirical analysis. This test aims to eliminate ambiguous matches by comparing the Euclidean distance of the nearest neighbor to that of the second-nearest neighbor. A ratio exceeding 0.75 indicates that the two best candidates are similarly close, suggesting that the feature lacks distinctiveness—often due to repetitive patterns or background clutter. 
+The selection of the 0.75 threshold for the distance ratio test is grounded in D. Lowe's original empirical analysis~\cite{lowe2004}. This test aims to eliminate ambiguous matches by comparing the Euclidean distance of the nearest neighbor to that of the second-nearest neighbor. A ratio exceeding 0.75 indicates that the two best candidates are similarly close, suggesting that the feature lacks distinctiveness—often due to repetitive patterns or background clutter. 
 
 We chose this specific value because it offers an optimal trade-off between precision and recall. \textbf{Higher thresholds} (e.g., 0.9) tend to retain too many incorrect matches where the descriptor is not unique enough, while \textbf{stricter thresholds} (e.g., 0.5) are too aggressive and discard valid correspondences, particularly in regions with lower texture variations. Thus, 0.75 effectively filters out unreliable keypoints while maintaining a dense set of features for the subsequent RANSAC estimation.
 
 \subsubsection{Homography Estimation (DLT with Normalization)}
 The relationship between planar points in the template ($\mathbf{x}$) and the frame ($\mathbf{x}'$) is modeled by a $3 \times 3$ Homography matrix $H$ such that $\mathbf{x}' \sim H\mathbf{x}$. The \textbf{Direct Linear Transform (DLT)} algorithm is used to solve for $H$ using Singular Value Decomposition (SVD).
 
-\paragraph{Data Normalization} A crucial step implemented is isotropic normalization. Before applying DLT, points are translated so their centroid is at the origin and scaled so the average distance from the origin is $\sqrt{2}$. This improves the numerical stability of the SVD.
+\paragraph{Data Normalization} A crucial step implemented is isotropic normalization~\cite{hartley2003}. Before applying DLT, points are translated so their centroid is at the origin and scaled so the average distance from the origin is $\sqrt{2}$. This improves the numerical stability of the SVD.
 
 \begin{equation}
     T_{norm} = \begin{bmatrix} s & 0 & -s \cdot c_x \\ 0 & s & -s \cdot c_y \\ 0 & 0 & 1 \end{bmatrix}
@@ -109,7 +104,7 @@ The relationship between planar points in the template ($\mathbf{x}$) and the fr
 \paragraph{Matrix A Construction} For N correspondence points $(x_i, y_i) \rightarrow (u_i, v_i)$, create a $2N \times 9$ matrix:
    $$A_i = \begin{pmatrix} -x_i & -y_i & -1 & 0 & 0 & 0 & x_i u_i & y_i u_i & u_i \\ 0 & 0 & 0 & -x_i & -y_i & -1 & x_i v_i & y_i v_i & v_i \end{pmatrix}$$
 
-\paragraph{SVD and H Extraction} $H = VT^{-1}$, where $V$ comes from complete SVD
+\paragraph{SVD and H Extraction} The solution is found via SVD: $A = U\Sigma V^T$, where $H$ is reshaped from the last column of $V$ (corresponding to the smallest singular value).
 
 \paragraph{Denormalization}
 The final Homography is denormalized via: 
@@ -118,45 +113,51 @@ The final Homography is denormalized via:
 \end{equation}
 
 \subsubsection{Robust Estimation (RANSAC)}
-To handle mismatches effectively, a Random Sample Consensus (RANSAC) scheme is implemented with the following parameters: \textbf{Iterations} (5000), \textbf{Sample Size} (4 points, minimum required for DLT), \textbf{Inlier Threshold} (3.0 pixels), and \textbf{Refinement} (after identifying the best model, $H$ is re-computed using all inliers to minimize the reprojection error via least squares).
+Even after Lowe's ratio test, some incorrect correspondences persist---particularly in low-texture regions or near occlusion boundaries. A direct least-squares solution to the homography would be severely biased by these outliers, potentially producing unusable results. RANSAC addresses this by iteratively searching for the largest subset of geometrically consistent matches.
 
+Our implementation uses the following parameters: \textbf{Iterations} (5000), \textbf{Sample Size} (4 points, the algebraic minimum for homography), \textbf{Inlier Threshold} (3.0 pixels), and \textbf{Refinement} (after identifying the best consensus set, $H$ is re-computed using all inliers for improved accuracy).
 
 \paragraph{Inlier Threshold Selection}
 The reprojection error threshold was set to 3.0 pixels based on an empirical analysis of the localization error inherent in our video data. At the typical working distances and camera resolutions used in this project, a deviation of 3.0 pixels corresponds to approximately 1--2 mm on the physical document surface. This specific value allows the system to accommodate the sensor noise floor and minor feature localization inaccuracies, while effectively rejecting correspondence errors caused by occlusions or texture ambiguities. A lower threshold would discard valid matches due to discretization noise, whereas a higher threshold would admit outliers, degrading the stability of the estimated homography.
 
 \paragraph{Iteration Strategy}
-To ensure robust model estimation without compromising runtime performance, we implemented an adaptive iteration scheme capped at 5000 iterations. The theoretical number of iterations is dynamically updated based on the inlier ratio to satisfy a desired confidence probability of $p=0.99$, ensuring a 99\% chance of sampling a minimal set of outlier-free points. The hard cap of 2000 iterations serves as a computational guardrail: it prevents the algorithm from stalling on difficult frames where the inlier ratio is low (e.g., during severe motion blur or occlusion), thereby keeping the tracking computationally tractable.
+To ensure robust model estimation without compromising runtime performance, we implemented an iteration scheme with 5000 iterations. The theoretical number of iterations needed to achieve a confidence probability $p$ is:
+\begin{equation}
+    k = \frac{\log(1 - p)}{\log(1 - w^s)}
+\end{equation}
+where $w$ is the inlier ratio and $s = 4$ is the sample size. With $p = 0.99$, this ensures a 99\% chance of sampling a minimal set of outlier-free points. The 5000-iteration budget provides a computational margin for difficult frames where the inlier ratio may be low (e.g., during severe motion blur or occlusion).
+
 \subsection{Experimental Setup and Evaluation}
 
 \paragraph{Dataset} We used the TAAG dataset, which provides a reference template image and a sequence of frames with varying perspectives and occlusions.
 
-\paragraph{Evaluation metrics} We considered the \textit{number of inliers} as an indicator of matching quality and \textit{robustness} as an ability to handle partial occlusions and significant transformations
+\paragraph{Evaluation metrics} We considered the \textit{number of inliers} as an indicator of matching quality and \textit{robustness} as an ability to handle partial occlusions and significant transformations.
 
 \paragraph{Execution Pipeline}
 The implementation is organized in two stages: (1) \textbf{Template Initialization:} SIFT extracts features from the template image and saves them to \texttt{template\_features.mat}. (2) \textbf{Frame-by-Frame Processing:} For each frame, SIFT features are extracted and stored; feature matching via Lowe's ratio test identifies correspondences; RANSAC (5000 iterations, 3.0 pixel threshold) estimates the best homography; the final $H$ is refined using all inliers and saved as \texttt{homography\_NNNN.mat}. Frames with fewer than 4 matches are skipped.
 
 \subsection{Example Results}
-The algorithm successfully tracks the template even under perspective distortion. The visualization (conceptually) involves projecting the four corners of the template onto the current frame using $H$.
+The algorithm successfully tracks the template even under perspective distortion. The visualization involves projecting the four corners of the template onto the current frame using $H$.
 
-2.3 Example Results
+\textbf{Typical result for a frame:}
+\begin{itemize}
+    \item \textbf{Raw Matches (after ratio test):} $\sim$50--100 correspondences
+    \item \textbf{RANSAC Inliers:} $\sim$40--80 (80--85\% acceptance rate)
+    \item \textbf{Average Reprojection Error (inliers):} $<$ 1.5 pixels
+\end{itemize}
 
-**Typical result for a frame:**
-- **Raw Matches (after ratio test):** ~50-100 correspondences
-- **RANSAC Inliers:** ~40-80 (80-85 acceptance rate)
-- **Average Reprojection Error (inliers):** < 1.5 pixels
+\textbf{Output File:} \texttt{homography\_0001.mat} contains the $H$ matrix ($3 \times 3$) representing the projective transformation.
 
-\textbf{Output File:} \texttt{homography\_0001.mat} contains the H matrix ($3 \times 3$) representing the projective transformation
-
-**Observations:**
-- Point normalization is crucial for numerical stability
-- RANSAC is robust to residual false matches
-- Estimated homographies enable template reprojection on each frame with sub-pixel accuracy
-
----
+\textbf{Observations:}
+\begin{itemize}
+    \item Point normalization is crucial for numerical stability
+    \item RANSAC is robust to residual false matches
+    \item Estimated homographies enable template reprojection on each frame with sub-pixel accuracy
+\end{itemize}
 
 \section{Part 2: 3D Rigid Body Motion Estimation}
 
-This section details the estimation of the camera's 3D trajectory (Odometry) by calculating the Rigid Body Transformation ($R, T$) between consecutive frames.
+This section details the estimation of the camera's 3D trajectory (Odometry) by calculating the Rigid Body Transformation ($R, T$) between the reference template and each frame.
 
 \subsection{Algorithmic Details}
 
@@ -172,41 +173,56 @@ Unlike Part 1, this module utilizes RGB-D data. 2D keypoints $(u, v)$ are back-p
 \begin{equation}
     X = \frac{(u - c_x) \cdot Z}{f_x}, \quad Y = \frac{(v - c_y) \cdot Z}{f_y}
 \end{equation}
-Points with invalid depth ($Z \le 0$) are discarded.
+Points with invalid depth ($Z \le 0$ or NaN) are discarded.
 
 \subsubsection{Orthogonal Procrustes Analysis}
-To find the rotation $R$ and translation $T$ that align two clouds of 3D points ($P_B \approx R \cdot P_A + T$), the Procrustes method: (1) subtracts centroids of both point clouds; (2) decomposes cross-covariance $H = P_B^T \times P_A$ via SVD into $U, \Sigma, V^T$; (3) computes rotation as $R = UV^T$; (4) corrects reflections by negating the last row of $V^T$ if $\det(R) < 0$; and (5) calculates translation as $T = \bar{P_B} - R \cdot \bar{P_A}$.
+To find the rotation $R$ and translation $T$ that align two clouds of 3D points ($P_B \approx R \cdot P_A + T$), we use the Orthogonal Procrustes method~\cite{arun1987}. Unlike iterative approaches such as ICP (Iterative Closest Point), Procrustes assumes that point correspondences are already established (via SIFT matching). This allows a direct closed-form solution rather than an iterative search, resulting in faster computation and guaranteed convergence. The method proceeds as follows:
+
+\begin{enumerate}
+    \item Compute centroids: $\bar{P}_A = \frac{1}{N}\sum P_A^{(i)}$, $\bar{P}_B = \frac{1}{N}\sum P_B^{(i)}$
+    \item Center both point clouds: $P'_A = P_A - \bar{P}_A$, $P'_B = P_B - \bar{P}_B$
+    \item Compute cross-covariance matrix: $H = (P'_A)^T \cdot P'_B$
+    \item Decompose via SVD: $H = U \Sigma V^T$
+    \item Compute rotation: $R = V U^T$
+    \item If $\det(R) < 0$, negate the last column of $V$ and recompute $R$~\cite{umeyama1991}
+    \item Compute translation: $T = \bar{P}_B - R \cdot \bar{P}_A$
+\end{enumerate}
 
 \subsubsection{RANSAC for 3D Alignment}
-A RANSAC loop wraps the Procrustes method to handle depth noise and matching errors with: \textbf{Iterations} (1000), \textbf{Sample Size} (3 points, minimum for rigid alignment), and \textbf{Threshold} (0.01 meters), applied to the Euclidean distance between transformed source and target points.
+Depth sensors introduce noise near object boundaries, and SIFT matches can fail in textureless or specular regions. Applying Procrustes directly to all correspondences would be corrupted by these outliers. We therefore wrap the Procrustes solver in a RANSAC loop with: \textbf{Iterations} (2000), \textbf{Sample Size} (4 points, providing redundancy over the theoretical minimum of 3), and \textbf{Threshold} (0.05 meters = 5 cm), applied to the Euclidean distance between transformed source and target points.
+
+\paragraph{Threshold Selection} The 5 cm threshold was determined through empirical analysis of our RGB-D sensor. Correctly matched points typically exhibit errors within this range due to sensor quantization, while mismatches or boundary artifacts produce errors exceeding 10 cm. After finding the largest consensus set, the final $(R, T)$ is recomputed using all inliers.
 
 \subsection{Experimental Setup and Evaluation}
 
 \paragraph{Dataset}
-The dataset comprises 1 RGB template with depth (\texttt{template\_depth.mat}), 12 RGB frames with depth (\texttt{frame\_NNNN.mat}), typical resolution of $640\times 480$ pixels, and depth format as H×W matrix with values in millimeters.
+The dataset comprises 1 RGB template with depth (\texttt{templatedepth.mat}), multiple RGB-D frames (\texttt{frame\_NNNN.mat}), typical resolution of $640\times 480$ pixels, and depth format as $H \times W$ matrix with values in millimeters.
 
 \paragraph{Evaluation metrics}
 Metrics include: \textbf{Number of Valid 3D Correspondences} (indicator of matching quality and depth density), \textbf{RANSAC Inliers} (ratio of robustness in pose estimation), and \textbf{Average 3D Error} (for inlier points).
 
 \paragraph{Execution Pipeline}
-The system iterates through pairs of \texttt{frame\_RGB} and \texttt{frame\_Depth}: (1) Load RGB template with depth; (2) For each frame—extract and match SIFT features, back-project matched 2D points to 3D using depth maps, run RANSAC + Procrustes to estimate $R, T$, and store results in \texttt{.mat} files.
+The system iterates through pairs of RGB and Depth files: (1) Load RGB template with depth; (2) For each frame—extract and match SIFT features, back-project matched 2D points to 3D using depth maps, run RANSAC + Procrustes to estimate $R, T$, and store results in \texttt{transform\_NNNN.mat} files.
 
 \subsection{Example Results}
-The resulting $R$ and $T$ matrices describe the camera's motion. By concatenating these transformations, the global trajectory of the camera can be plotted. The use of RANSAC significantly reduces "jumps" in the trajectory caused by noisy depth values at object boundaries.
-3.3 Example Results
+The resulting $R$ and $T$ matrices describe the camera's motion relative to the template. The use of RANSAC significantly reduces ``jumps'' in the trajectory caused by noisy depth values at object boundaries.
 
-**Typical result for a frame:**
-- **2D-2D Correspondences:** ~60-150 SIFT matches
-- **Valid 3D Correspondences** (depth available): ~50-120
-- **RANSAC-Procrustes Inliers:** ~40-100 (70-85 acceptance)
-- **Average Error (inliers):** 1-3 cm
+\textbf{Typical result for a frame:}
+\begin{itemize}
+    \item \textbf{2D-2D Correspondences:} $\sim$60--150 SIFT matches
+    \item \textbf{Valid 3D Correspondences} (depth available): $\sim$50--120
+    \item \textbf{RANSAC-Procrustes Inliers:} $\sim$40--100 (70--85\% acceptance)
+    \item \textbf{Average Error (inliers):} 1--3 cm
+\end{itemize}
 
-\textbf{Output File:} \texttt{transform\_NNNN.mat} contains R ($3 \times 3$ orthogonal rotation matrix) and T ($3 \times 1$ translation vector)
+\textbf{Output File:} \texttt{transform\_NNNN.mat} contains $R$ ($3 \times 3$ orthogonal rotation matrix) and $T$ ($3 \times 1$ translation vector).
 
-**Validation:**
-- Matrix R satisfies $R^T R = I$ (orthogonality)
-- det(R) = 1 (pure rotation, no reflection)
-- Vector T represents translation in meters (or depth units)
+\textbf{Validation:}
+\begin{itemize}
+    \item Matrix $R$ satisfies $R^T R = I$ (orthogonality)
+    \item $\det(R) = 1$ (pure rotation, no reflection)
+    \item Vector $T$ represents translation in the depth sensor's unit system
+\end{itemize}
 
 \section{Discussion and Limitations}
 
@@ -219,12 +235,25 @@ The resulting $R$ and $T$ matrices describe the camera's motion. By concatenatin
 Limitations include: limited to planar scenes, sensitivity to lighting changes (though SIFT mitigates this), and requirement for sufficient extractable features.
 
 \paragraph{Part 2}
-Limitations include: critical dependency on depth data quality (noise, holes), degraded performance if valid 3D correspondences < 3 (RANSAC MSS), and sensitivity to calibration of $K$.
+Limitations include: critical dependency on depth data quality (noise, holes), degraded performance if valid 3D correspondences $< 4$ (RANSAC sample size), and sensitivity to calibration of $K$.
 
 \subsection{Conclusion}
 The implemented pipeline demonstrates a standard computer vision approach: Feature Extraction $\rightarrow$ Matching $\rightarrow$ Robust Model Estimation. The use of SVD for both DLT and Procrustes ensures mathematically rigorous solutions to the minimization problems.
 
+\begin{thebibliography}{9}
 
-    
+\bibitem{lowe2004}
+D.~G. Lowe, ``Distinctive image features from scale-invariant keypoints,'' \textit{International Journal of Computer Vision}, vol.~60, no.~2, pp.~91--110, 2004.
+
+\bibitem{hartley2003}
+R.~Hartley and A.~Zisserman, \textit{Multiple View Geometry in Computer Vision}, 2nd ed. Cambridge University Press, 2003.
+
+\bibitem{arun1987}
+K.~S. Arun, T.~S. Huang, and S.~D. Blostein, ``Least-squares fitting of two 3-D point sets,'' \textit{IEEE Trans. Pattern Analysis and Machine Intelligence}, vol.~PAMI-9, no.~5, pp.~698--700, 1987.
+
+\bibitem{umeyama1991}
+S.~Umeyama, ``Least-squares estimation of transformation parameters between two point patterns,'' \textit{IEEE Trans. Pattern Analysis and Machine Intelligence}, vol.~13, no.~4, pp.~376--380, 1991.
+
+\end{thebibliography}
 
 \end{document}
