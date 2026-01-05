@@ -1,0 +1,203 @@
+\documentclass[10pt]{extarticle}
+\renewcommand{\arraystretch}{1.5}
+\renewcommand{\baselinestretch}{1.5}
+\usepackage[onehalfspacing]{setspace}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{0.2em}
+\font\myfont=cmr12 at 26pt
+\usepackage{anyfontsize}
+\usepackage{tabularx}
+\usepackage{multirow}
+\pagenumbering{arabic} 
+\usepackage{soul}
+\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{blindtext}
+\usepackage{titling}
+\setlength{\droptitle}{-14em}   % This is your set screw
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{eso-pic}
+\graphicspath{ {./images/} }
+\usepackage{subcaption}
+\usepackage{geometry}
+\usepackage[section]{placeins}
+\geometry{margin=2cm, bmargin=2cm, tmargin=3cm}
+
+\newcommand{\ctext}[3][RGB]{%
+  \begingroup
+  \definecolor{hlcolor}{#1}{#2}\sethlcolor{hlcolor}%
+  \hl{#3}%
+  \endgroup
+}
+
+
+\begin{document}
+
+
+\AddToShipoutPictureBG*{
+\AtPageUpperLeft{
+\hspace{19.5cm}
+\raisebox{-2.5cm}{\makebox[0pt][r]{\fontsize{36}{1cm}\selectfont PIV 2025/2026\par}}}}
+
+\AddToShipoutPictureBG*{
+\AtPageUpperLeft{
+\hspace{6.5cm}
+\raisebox{-3.5cm}{
+\makebox[0pt][r]{ 
+\includegraphics[scale=0.95]{images/tecnico_logo.jpg}\\[3cm]}}}}
+
+
+\title{{\myfont PIV Project}}  % Title
+\setlength{\droptitle}{1cm}
+
+\date{\vspace{-9ex}} % Date for the report, skipped and used to adjust height
+\maketitle % Insert the title, author and date
+\begin{center}
+    %\setlength\extrarowheight{7pt}
+    \begin{tabular}{ |l|l l|l| }
+        \hline
+        \multirow{4}{6em}{\textbf{Group nr: } 9} & \textbf{Student 1: }Alexandre Cachera & \textbf{IST nr: }116285\\
+        & \textbf{Student 2: }Tiago Nunes Couto  & \textbf{IST nr:} 113311\\
+        & \textbf{Student 3: }Bernardo Silva Costa  & \textbf{IST nr: }102777 \\
+        & \textbf{Student 4: }Gabriel Badan  & \textbf{IST nr: }116537 \\
+        \hline
+    \end{tabular}
+\end{center}
+
+\section{Motivations}
+
+This project aims to estimate geometric transformations between a reference image and a sequence of images using classical and modern computer vision techniques. The project is structured in two parts:
+
+\begin{itemize}
+    \item \textit{Part 1 : }Estimation of 2D homography from grayscale images
+    \item \textit{Part 2 : } Estimation of rigid 3D transformation (rotation and translation) from RGB-D data
+\end{itemize}
+
+These techniques find applications in object tracking, 3D reconstruction, robotic localization, and augmented reality.
+
+\section{Part 1: Planar Object Tracking via Homography}
+
+This section describes the implementation of a 2D planar tracking system that estimates the Homography ($H$) between a reference template and a sequence of video frames.
+
+\subsection{Algorithmic Details}
+
+\subsubsection{Feature Extraction and Matching}
+
+The system utilizes the \textbf{Scale-Invariant Feature Transform (SIFT)} to : 
+\begin{itemize}
+    \item Detect interest points robust to scale and rotation
+    \item Extract 128-dimensional invariant descriptors
+    \item Generate a `.mat` file per frame containing keypoints and descriptors
+\end{itemize}
+
+\begin{itemize}
+    \item \textbf{Matching:} Feature matching is performed using the Euclidean distance between descriptors.
+    \item \textbf{Outlier Rejection:} To ensure match quality, \textbf{Lowe’s Ratio Test} is applied. A match is kept only if the distance to the nearest neighbor is less than $0.75 \times$ the distance to the second nearest neighbor.
+\end{itemize}
+
+\subsubsection{Homography Estimation (DLT with Normalization)}
+The relationship between planar points in the template ($\mathbf{x}$) and the frame ($\mathbf{x}'$) is modeled by a $3 \times 3$ Homography matrix $H$ such that $\mathbf{x}' \sim H\mathbf{x}$. The \textbf{Direct Linear Transform (DLT)} algorithm is used to solve for $H$ using Singular Value Decomposition (SVD).
+
+\paragraph{Data Normalization:} A crucial step implemented is isotropic normalization. Before applying DLT, points are translated so their centroid is at the origin and scaled so the average distance from the origin is $\sqrt{2}$. This improves the numerical stability of the SVD.
+
+\begin{equation}
+    T_{norm} = \begin{bmatrix} s & 0 & -s \cdot c_x \\ 0 & s & -s \cdot c_y \\ 0 & 0 & 1 \end{bmatrix}
+\end{equation}
+
+The final Homography is denormalized via: 
+\begin{equation}
+    H = T_{dst}^{-1} H_{norm} T_{src}
+\end{equation}
+
+\subsubsection{Robust Estimation (RANSAC)}
+To handle mismatches effectively, a Random Sample Consensus (RANSAC) scheme is implemented with the following parameters:
+\begin{itemize}
+    \item \textbf{Iterations:} 5000.
+    \item \textbf{Sample Size:} 4 points (minimum required for DLT).
+    \item \textbf{Inlier Threshold:} 3.0 pixels.
+    \item \textbf{Refinement:} After identifying the best model, $H$ is re-computed using \textbf{all} inliers found by the best model to minimize the reprojection error via least squares.
+\end{itemize}
+
+\subsection{Experimental Setup and Evaluation}
+The pipeline processes a directory of JPEG images. For every frame:
+\begin{enumerate}
+    \item Features are extracted and matched against the pre-computed template features.
+    \item RANSAC estimates the best $H$.
+    \item The result is stored as a \texttt{.mat} file containing the $3 \times 3$ matrix.
+\end{enumerate}
+
+\textbf{Evaluation Metric:} The primary metric for tracking success is the number of inliers retained after RANSAC. A count below 4 indicates a tracking failure.
+
+\subsection{Example Results}
+The algorithm successfully tracks the template even under perspective distortion. The visualization (conceptually) involves projecting the four corners of the template onto the current frame using $H$.
+
+\section{Part 2: 3D Rigid Body Motion Estimation}
+
+This section details the estimation of the camera's 3D trajectory (Odometry) by calculating the Rigid Body Transformation ($R, T$) between consecutive frames.
+
+\subsection{Algorithmic Details}
+
+\subsubsection{3D Point Generation}
+Unlike Part 1, this module utilizes RGB-D data. 2D keypoints $(u, v)$ are back-projected into 3D space $(X, Y, Z)$ using the corresponding depth map and the Pinhole Camera Model intrinsics matrix $K$:
+
+\begin{equation}
+    Z = \text{depth}(v, u)
+\end{equation}
+\begin{equation}
+    X = \frac{(u - c_x) \cdot Z}{f_x}, \quad Y = \frac{(v - c_y) \cdot Z}{f_y}
+\end{equation}
+Points with invalid depth ($Z \le 0$) are discarded.
+
+\subsubsection{Orthogonal Procrustes Analysis}
+To find the rotation $R$ and translation $T$ that align two clouds of 3D points ($P_A$ and $P_B$), the Procrustes method is used.
+\begin{itemize}
+    \item \textbf{Centering:} Centroids of both point clouds are subtracted.
+    \item \textbf{SVD:} The cross-covariance matrix $H = \sum (p_{Bi} - \bar{p}_B)(p_{Ai} - \bar{p}_A)^T$ is decomposed into $U, \Sigma, V^T$.
+    \item \textbf{Rotation:} $R = UV^T$.
+    \item \textbf{Reflection Correction:} To ensure a valid rotation (determinant $+1$) rather than a reflection (determinant $-1$), if $\det(R) < 0$, the last row of $V^T$ is negated.
+\end{itemize}
+
+\subsubsection{RANSAC for 3D Alignment}
+A RANSAC loop wraps the Procrustes method to be robust against depth noise and matching errors:
+\begin{itemize}
+    \item \textbf{Iterations:} 1000.
+    \item \textbf{Sample Size:} 3 points (minimum for rigid alignment).
+    \item \textbf{Threshold:} 0.01 (meters), applied to the Euclidean distance between transformed source points and target points.
+\end{itemize}
+
+\subsection{Experimental Setup and Evaluation}
+The system iterates through pairs of \texttt{frame\_RGB} and \texttt{frame\_Depth}.
+\begin{enumerate}
+    \item Feature matching provides correspondences between Frame $t$ and Frame $t+1$.
+    \item Matches are converted to 3D point clouds.
+    \item RANSAC + Procrustes computes the relative pose $(R, T)$.
+    \item Output is saved as \texttt{transform\_N.mat}.
+\end{enumerate}
+
+\subsection{Example Results}
+The resulting $R$ and $T$ matrices describe the camera's motion. By concatenating these transformations, the global trajectory of the camera can be plotted. The use of RANSAC significantly reduces "jumps" in the trajectory caused by noisy depth values at object boundaries.
+
+\section{Part 3: Discussion and Limitations}
+
+\subsection{Comparison of Methods}
+\begin{itemize}
+    \item \textbf{2D Homography (Part 1):} Efficient for tracking planar objects. However, it fails if the target object is non-planar or if the camera motion induces significant parallax that a planar model cannot represent. The DLT normalization implementation is critical for maintaining accuracy when coordinates are large.
+    \item \textbf{3D Procrustes (Part 2):} Provides full 6-DoF pose estimation. It requires depth data, making it dependent on the quality of the depth sensor. The implementation correctly handles coordinate system reflections, which is a common pitfall in SVD-based estimation.
+\end{itemize}
+
+\subsection{Numerical Stability \& Parameters}
+\begin{itemize}
+    \item \textbf{RANSAC Thresholds:} Part 1 uses a pixel-based threshold (3.0px), which is appropriate for image-space errors. Part 2 uses a metric threshold (0.01 units), which corresponds to 1cm accuracy in 3D space.
+    \item \textbf{Refinement:} Part 1 explicitly refines the model using all inliers. Part 2 currently selects the Best $R, T$ from the loop but does not explicitly run a final Procrustes on all inliers of the best set. Adding this step could further improve trajectory smoothness.
+\end{itemize}
+
+\subsection{Conclusion}
+The implemented pipeline demonstrates a standard computer vision approach: Feature Extraction $\rightarrow$ Matching $\rightarrow$ Robust Model Estimation. The use of SVD for both DLT and Procrustes ensures mathematically rigorous solutions to the minimization problems.
+
+
+    
+
+\end{document}
