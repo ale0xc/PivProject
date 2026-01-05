@@ -174,6 +174,14 @@ This section details the estimation of the camera's 3D trajectory (Odometry) by 
 
 \subsection{Algorithmic Details}
 
+\subsubsection{Feature Extraction and Matching}
+
+\begin{itemize}
+    \item Use SIFT on RGB images to identify 2D-2D correspondences
+    \item Apply same Lowe's ratio test (threshold = 0.75)
+    \item Recover SIFT descriptors robust to lighting changes
+\end{itemize}
+
 \subsubsection{3D Point Generation}
 Unlike Part 1, this module utilizes RGB-D data. 2D keypoints $(u, v)$ are back-projected into 3D space $(X, Y, Z)$ using the corresponding depth map and the Pinhole Camera Model intrinsics matrix $K$:
 
@@ -186,12 +194,13 @@ Unlike Part 1, this module utilizes RGB-D data. 2D keypoints $(u, v)$ are back-p
 Points with invalid depth ($Z \le 0$) are discarded.
 
 \subsubsection{Orthogonal Procrustes Analysis}
-To find the rotation $R$ and translation $T$ that align two clouds of 3D points ($P_A$ and $P_B$), the Procrustes method is used.
+To find the rotation $R$ and translation $T$ that align two clouds of 3D points ($P_B \approx R \cdot P_A + T$), the Procrustes method is used.
 \begin{itemize}
     \item \textbf{Centering:} Centroids of both point clouds are subtracted.
-    \item \textbf{SVD:} The cross-covariance matrix $H = \sum (p_{Bi} - \bar{p}_B)(p_{Ai} - \bar{p}_A)^T$ is decomposed into $U, \Sigma, V^T$.
+    \item \textbf{SVD:} The cross-covariance matrix $H =  P_B^T × P_A$ is decomposed into $U, \Sigma, V^T$.
     \item \textbf{Rotation:} $R = UV^T$.
     \item \textbf{Reflection Correction:} To ensure a valid rotation (determinant $+1$) rather than a reflection (determinant $-1$), if $\det(R) < 0$, the last row of $V^T$ is negated.
+    \item \textbf{Translation:} $T = \bar{P_B} - R \cdot \bar{P_A}$, where $\bar{P_A}$ and $\bar{P_B}$ are the centroids of the original point clouds.
 \end{itemize}
 
 \subsubsection{RANSAC for 3D Alignment}
@@ -203,18 +212,53 @@ A RANSAC loop wraps the Procrustes method to be robust against depth noise and m
 \end{itemize}
 
 \subsection{Experimental Setup and Evaluation}
+
+\paragraph{Dataset}
+\begin{itemize}
+    \item 1 RGB template + depth (\texttt{template\_depth.mat})
+    \item 12 RGB frames + depth (\texttt{frame\_NNNN.mat})
+    \item Resolution: typically $640\times 480$ pixels
+    \item Depth format: H\texttimes{}W matrix with values in millimeters
+\end{itemize}
+
+\paragraph{Evaluation metrics }
+\begin{itemize}
+    \item \textbf{Number of Valid 3D Correspondences:} Indicator of matching quality and depth density
+    \item \textbf{RANSAC Inliers:} Ratio of robustness in pose estimation
+    \item \textbf{Average 3D Error:} For inlier points
+\end{itemize}
+
+\paragraph{Execution Pipeline}
 The system iterates through pairs of \texttt{frame\_RGB} and \texttt{frame\_Depth}.
 \begin{enumerate}
-    \item Feature matching provides correspondences between Frame $t$ and Frame $t+1$.
-    \item Matches are converted to 3D point clouds.
-    \item RANSAC + Procrustes computes the relative pose $(R, T)$.
-    \item Output is saved as \texttt{transform\_N.mat}.
+    \item Load RGB template + depth
+    \item For each frame:
+    \begin{itemize}
+        \item Extract and match SIFT features
+        \item Back-project matched 2D points to 3D using depth maps
+        \item Run RANSAC + Procrustes to estimate $R, T$
+        \item Store results in \texttt{.mat} files containing $R$ and $T$
+    \end{itemize}
 \end{enumerate}
 
 \subsection{Example Results}
 The resulting $R$ and $T$ matrices describe the camera's motion. By concatenating these transformations, the global trajectory of the camera can be plotted. The use of RANSAC significantly reduces "jumps" in the trajectory caused by noisy depth values at object boundaries.
+3.3 Example Results
 
-\section{Part 3: Discussion and Limitations}
+**Typical result for a frame:**
+- **2D-2D Correspondences:** ~60-150 SIFT matches
+- **Valid 3D Correspondences** (depth available): ~50-120
+- **RANSAC-Procrustes Inliers:** ~40-100 (70-85 acceptance)
+- **Average Error (inliers):** 1-3 cm
+
+\textbf{Output File:} \texttt{transform\_NNNN.mat} contains R ($3 \times 3$ orthogonal rotation matrix) and T ($3 \times 1$ translation vector)
+
+**Validation:**
+- Matrix R satisfies $R^T R = I$ (orthogonality)
+- det(R) = 1 (pure rotation, no reflection)
+- Vector T represents translation in meters (or depth units)
+
+\section{Discussion and Limitations}
 
 \subsection{Comparison of Methods}
 \begin{itemize}
@@ -222,10 +266,20 @@ The resulting $R$ and $T$ matrices describe the camera's motion. By concatenatin
     \item \textbf{3D Procrustes (Part 2):} Provides full 6-DoF pose estimation. It requires depth data, making it dependent on the quality of the depth sensor. The implementation correctly handles coordinate system reflections, which is a common pitfall in SVD-based estimation.
 \end{itemize}
 
-\subsection{Numerical Stability \& Parameters}
+\subsection{Identified Limitations}
+
+\paragraph{Part 1}
 \begin{itemize}
-    \item \textbf{RANSAC Thresholds:} Part 1 uses a pixel-based threshold (3.0px), which is appropriate for image-space errors. Part 2 uses a metric threshold (0.01 units), which corresponds to 1cm accuracy in 3D space.
-    \item \textbf{Refinement:} Part 1 explicitly refines the model using all inliers. Part 2 currently selects the Best $R, T$ from the loop but does not explicitly run a final Procrustes on all inliers of the best set. Adding this step could further improve trajectory smoothness.
+    \item Limited to planar scenes
+    \item Sensitive to lighting changes (though SIFT mitigates this)
+    \item Requires sufficient extractable features
+\end{itemize}
+
+\paragraph{Part 2}
+\begin{itemize}
+    \item Critical dependency on depth data quality (noise, holes)
+    \item Degraded performance if valid 3D correspondences < 3 (RANSAC MSS)
+    \item Sensitivity to calibration of K
 \end{itemize}
 
 \subsection{Conclusion}

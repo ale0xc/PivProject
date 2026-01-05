@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.26)  5 JAN 2026 16:38
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.26)  5 JAN 2026 17:10
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -415,7 +415,15 @@ Package pdftex.def Info: images/tecnico_logo.jpg  used on input line 109.
 LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 149.
  (C:\Users\acach\AppData\Local\Programs\MiKTeX\tex/latex/base\t1cmtt.fd
 File: t1cmtt.fd 2023/04/13 v2.5m Standard LaTeX font definitions
-) [3] [4] [5] (report.aux)
+) [3]
+
+LaTeX Warning: Command \texttimes invalid in math mode on input line 200.
+
+
+LaTeX Warning: Command \texttimes invalid in math mode on input line 200.
+
+Missing character: There is no Ö in font cmr10!
+[4] [5] [6] (report.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
@@ -430,9 +438,9 @@ Here is how much of TeX's memory you used:
  1141 hyphenation exceptions out of 8191
  67i,13n,77p,413b,262s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1200.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsi1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcss1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1440.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecss1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi603\ecss3583.pk><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb>
-Output written on report.pdf (5 pages, 207116 bytes).
+Output written on report.pdf (6 pages, 209119 bytes).
 PDF statistics:
- 347 PDF objects out of 1000 (max. 8388607)
+ 352 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  6 words of extra memory for PDF output out of 10000 (max. 10000000)
 
