@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.26)  5 JAN 2026 23:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.26)  6 JAN 2026 00:21
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -440,37 +440,66 @@ File: images/result_frame_014.jpg Graphic file (type jpg)
 <use images/result_frame_014.jpg>
 Package pdftex.def Info: images/result_frame_014.jpg  used on input line 159.
 (pdftex.def)             Requested size: 232.97914pt x 157.66774pt.
-LaTeX Font Info:    Trying to load font information for TS1+cmss on input line 167.
- (C:\Users\acach\AppData\Local\Programs\MiKTeX\tex/latex/base\ts1cmss.fd
+
+Overfull \hbox (24.56999pt too wide) in paragraph at lines 172--183
+ [][] 
+ []
+
+LaTeX Font Info:    Trying to load font information for TS1+cmss on input line 191.
+(C:\Users\acach\AppData\Local\Programs\MiKTeX\tex/latex/base\ts1cmss.fd
 File: ts1cmss.fd 2023/04/13 v2.5m Standard LaTeX font definitions
 ) [3 <./images/result_frame_007.jpg> <./images/combined_0010.jpg> <./images/result_frame_014.jpg>]
-Underfull \hbox (badness 1442) in paragraph at lines 220--221
+Underfull \hbox (badness 1442) in paragraph at lines 237--238
 \T1/cmss/m/n/10 depth (\T1/cmtt/m/n/10 templatedepth.mat\T1/cmss/m/n/10 ), mul-ti-ple RGB-D frames
  []
 
 [4]
-Underfull \hbox (badness 1902) in paragraph at lines 276--277
+<images/vis_part3_frame_0002.jpg, id=37, 2079.77pt x 519.9425pt>
+File: images/vis_part3_frame_0002.jpg Graphic file (type jpg)
+<use images/vis_part3_frame_0002.jpg>
+Package pdftex.def Info: images/vis_part3_frame_0002.jpg  used on input line 251.
+(pdftex.def)             Requested size: 232.97914pt x 58.24109pt.
+<images/vis_part3_frame_0009.jpg, id=38, 2079.77pt x 519.9425pt>
+File: images/vis_part3_frame_0009.jpg Graphic file (type jpg)
+<use images/vis_part3_frame_0009.jpg>
+Package pdftex.def Info: images/vis_part3_frame_0009.jpg  used on input line 258.
+(pdftex.def)             Requested size: 232.97914pt x 58.24109pt.
+<images/WhatsApp Image 2025-12-22 at 12.33.32.jpeg, id=39, 903.375pt x 769.87625pt>
+File: images/WhatsApp Image 2025-12-22 at 12.33.32.jpeg Graphic file (type jpg)
+<use images/WhatsApp Image 2025-12-22 at 12.33.32.jpeg>
+Package pdftex.def Info: images/WhatsApp Image 2025-12-22 at 12.33.32.jpeg  used on input line 265.
+(pdftex.def)             Requested size: 232.97914pt x 198.54196pt.
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Underfull \hbox (badness 1270) in paragraph at lines 279--280
+ \T1/cmss/bx/n/10 Quan-ti-ta-tive Ob-ser-va-tions[] \T1/cmss/m/n/10 Across the 12 pro-cessed
+ []
+
+[5 <./images/vis_part3_frame_0002.jpg> <./images/vis_part3_frame_0009.jpg> <./images/WhatsApp Image 2025-12-22 at 12.33.32.jpeg>]
+Underfull \hbox (badness 1902) in paragraph at lines 325--326
 \T1/cmss/m/it/10 Trans. Pat-tern Anal-y-sis and Ma-chine In-tel-li-gence\T1/cmss/m/n/10 ,
  []
 
-[5] (report.aux)
+[6] (report.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 7470 strings out of 474486
- 130432 string characters out of 5743754
+ 7504 strings out of 474486
+ 131614 string characters out of 5743754
  1942542 words of memory out of 5000000
- 29607 multiletter control sequences out of 15000+600000
- 575720 words of font info for 74 fonts, out of 8000000 for 9000
+ 29639 multiletter control sequences out of 15000+600000
+ 576340 words of font info for 76 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 67i,13n,77p,793b,299s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 67i,13n,77p,793b,306s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcss1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1200.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsi1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecss1000.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx1440.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecss0900.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecsx0900.pk> <C:\Users\acach\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi603\ecss3583.pk><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb>
-Output written on report.pdf (5 pages, 708620 bytes).
+Output written on report.pdf (6 pages, 1408504 bytes).
 PDF statistics:
- 417 PDF objects out of 1000 (max. 8388607)
+ 455 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
- 21 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 36 words of extra memory for PDF output out of 10000 (max. 10000000)
 

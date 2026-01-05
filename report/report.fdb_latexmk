@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1767653299.31608 "c:/Users/acach/OneDrive/Documents/PIV/report/report.tex" "report.pdf" "report" 1767653301.74744 0
+["pdflatex"] 1767655309.62126 "c:/Users/acach/OneDrive/Documents/PIV/report/report.tex" "report.pdf" "report" 1767655312.0311 0
   "C:/Users/acach/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1767622169 96176 40a8022d15c5925d7081b1ad66e03248 ""
   "C:/Users/acach/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/ecsi1000.pk" 1767625520 24544 87d323213eb68e4549d710df8d66d500 ""
   "C:/Users/acach/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/ecss0900.pk" 1766753531 17932 572d684d5721c9de0d6bd4a67a18f562 ""
@@ -32,7 +32,9 @@
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/cmextra/cmex9.tfm" 1234365220 996 a18840b13b499c08ac2de96a99eda4bc ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmbx10.tfm" 1136765053 1328 c834bbb027764024c09d3d2bf908b5f0 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmbx5.tfm" 1136765053 1332 f817c21a1ba54560425663374f1b651a ""
+  "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmbx6.tfm" 1136765053 1344 8a0be4fe4d376203000810ad4dc81558 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmbx7.tfm" 1136765053 1336 3125ccb448c1a09074e3aa4a9832f130 ""
+  "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmbx9.tfm" 1136765053 1328 5442e22a7072966dbaf88ca900acf3f0 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmex10.tfm" 1136765053 992 662f679a0b3d2d53c1b94050fdaa3f50 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmmi12.tfm" 1136765053 1524 4414a8315f39513458b80dfc63bff03a ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmmi6.tfm" 1136765053 1512 f21f83efb36853c0b70002322c1ab3ad ""
@@ -114,13 +116,16 @@
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/tools/tabularx.sty" 1700599895 7147 d45559f8a31b8c53ada0640516660003 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/tools/xspace.sty" 1700599895 4545 9f5ea23ab1c91476c42749893f790666 ""
   "C:/Users/acach/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1700127522 55487 80a65caedd3722f4c20a14a69e785d8f ""
-  "c:/Users/acach/OneDrive/Documents/PIV/report/report.tex" 1767653295 18150 2f71239d24acf09c404ff1432900f754 ""
+  "c:/Users/acach/OneDrive/Documents/PIV/report/report.tex" 1767655304 20598 432fa870014d117d554b24daa2f8dce6 ""
+  "images/WhatsApp Image 2025-12-22 at 12.33.32.jpeg" 1767654380 145305 647b0bc1b68c7ef57c26c26dc40a71d1 ""
   "images/combined_0010.jpg" 1767646989 164842 f258f7fa4502e9247c631eb4fde78173 ""
   "images/result_frame_007.jpg" 1767646988 182028 05c1104a09f1b17bb6a8c92aa67b7e5c ""
   "images/result_frame_014.jpg" 1767646990 124873 dac5bcee16fd49714b7bf397aea091e8 ""
   "images/tecnico_logo.jpg" 1766750485 14375 f0b38e324d9f9cb81b99612c43ea658d ""
-  "report.aux" 1767653301 4924 c87b61ee82126d9617d80501a4e49d49 "pdflatex"
-  "report.tex" 1767653295 18150 2f71239d24acf09c404ff1432900f754 ""
+  "images/vis_part3_frame_0002.jpg" 1767625419 270873 6df76cd296263447fbbd59a39c0eaf72 ""
+  "images/vis_part3_frame_0009.jpg" 1767625419 270927 164f44c83c3171cd1eae5643179c8499 ""
+  "report.aux" 1767655311 6302 1a23329f010b1d5e48710dc954556b7c "pdflatex"
+  "report.tex" 1767655304 20598 432fa870014d117d554b24daa2f8dce6 ""
   (generated)
   "report.aux"
   "report.log"

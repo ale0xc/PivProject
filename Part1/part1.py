@@ -132,12 +132,32 @@ def part1(path_ref, path_imgs, path_feats, path_out):
 
         # --- REFINAMENTO --- 
         # Recalcular H usando TODOS os inliers do melhor modelo (Mínimos Quadrados implícito no DLT com N pontos)
+        mean_error = 0.0
         if max_inliers > 4:
             final_src = matches_src[best_inliers_mask]
             final_dst = matches_dst[best_inliers_mask]
             best_H = compute_homography_dlt(final_src, final_dst)
+            
+            # Calcular erro de reprojection final
+            ones = np.ones((len(final_src), 1))
+            src_h = np.hstack((final_src, ones))
+            projected = (best_H @ src_h.T).T
+            with np.errstate(divide='ignore', invalid='ignore'):
+                projected = projected[:, :2] / projected[:, 2:]
+            errors = np.linalg.norm(projected - final_dst, axis=1)
+            mean_error = np.mean(errors)
+
+        # --- STATISTIQUES ---
+        raw_matches = len(matches_src)
+        inlier_ratio = (max_inliers / raw_matches * 100) if raw_matches > 0 else 0
 
         # --- GUARDAR RESULTADO --- [cite: 95]
         out_name = "homography_" + f.replace(".mat", ".mat").split('_')[-1] # formata homography_NNNN.mat
-        sio.savemat(os.path.join(path_out, out_name), {"H": best_H})
-        print(f"Processado {f}: {max_inliers} inliers. H guardado.")
+        sio.savemat(os.path.join(path_out, out_name), {
+            "H": best_H,
+            "raw_matches": raw_matches,
+            "ransac_inliers": max_inliers,
+            "inlier_ratio": inlier_ratio,
+            "mean_reprojection_error": mean_error
+        })
+        print(f"Processado {f}: {raw_matches} matches -> {max_inliers} inliers ({inlier_ratio:.1f}%) | Err: {mean_error:.2f}px")
